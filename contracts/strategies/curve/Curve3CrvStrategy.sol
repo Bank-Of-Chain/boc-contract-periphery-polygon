@@ -71,6 +71,28 @@ contract Curve3CrvStrategy is Initializable, BaseClaimableStrategy {
         }
     }
 
+    function getOutputsInfo() external view virtual override returns (OutputInfo[] memory outputsInfo) {
+        outputsInfo = new OutputInfo[](4);
+        OutputInfo memory info0 = outputsInfo[0];
+        info0.outputCode = 0;
+        info0.outputTokens = wants;
+
+        OutputInfo memory info1 = outputsInfo[1];
+        info1.outputCode = 1;
+        info1.outputTokens = new address[](1);
+        info1.outputTokens[0] = wants[0];
+
+        OutputInfo memory info2 = outputsInfo[2];
+        info2.outputCode = 2;
+        info2.outputTokens = new address[](1);
+        info2.outputTokens[0] = wants[1];
+
+        OutputInfo memory info3 = outputsInfo[3];
+        info3.outputCode = 3;
+        info3.outputTokens = new address[](1);
+        info3.outputTokens[0] = wants[2];
+    }
+
     /**
      * @dev Returns the number of stablecoins held by the policy (both in third party pools and on hand)
      */
@@ -90,10 +112,9 @@ contract Curve3CrvStrategy is Initializable, BaseClaimableStrategy {
         // our 3CRV amount is equal to our gauge lp token amount
         uint256 lpAmount = balanceOfLpToken();
         uint256 totalSupply = IERC20Upgradeable(LP_TOKEN).totalSupply();
+        ICurveStableSwap3Crv pool = ICurveStableSwap3Crv(LP_TOKEN_POOL);
         for (uint256 i = 0; i < _tokens.length; i++) {
-            uint256 depositTokenAmount = (ICurveStableSwap3Crv(LP_TOKEN_POOL).balances(i) *
-                lpAmount) / totalSupply;
-            _amounts[i] = balanceOfToken(_tokens[i]) + depositTokenAmount;
+            _amounts[i] = balanceOfToken(_tokens[i]) + (pool.balances(i) * lpAmount) / totalSupply;
         }
     }
 
@@ -126,10 +147,7 @@ contract Curve3CrvStrategy is Initializable, BaseClaimableStrategy {
     /**
      * @dev deposit money to the third party pools
      */
-    function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
-        internal
-        override
-    {
+    function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts) internal override {
         // approve
         for (uint256 i = 0; i < _assets.length; i++) {
             IERC20Upgradeable(_assets[i]).safeApprove(LP_TOKEN_POOL, 0);
@@ -153,16 +171,33 @@ contract Curve3CrvStrategy is Initializable, BaseClaimableStrategy {
     /**
      * @dev take money from the third party pools
      */
-    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares) internal override {
+    function withdrawFrom3rdPool(
+        uint256 _withdrawShares,
+        uint256 _totalShares,
+        uint256 _outputCode
+    ) internal override {
         uint256 _lpAmount = (balanceOfLpToken() * _withdrawShares) / _totalShares;
 
-        if (_lpAmount > 0) {
-            ICurveGauge(gauge).withdraw(_lpAmount);
+        ICurveGauge(gauge).withdraw(_lpAmount);
+        if (_outputCode == 0) {
             // withdraw multi coins
             uint256[3] memory minAmounts;
-
             ICurveStableSwap3Crv(LP_TOKEN_POOL).remove_liquidity(_lpAmount, minAmounts, true);
+        } else {
+            int128 index;
+            if (_outputCode == 1){
+                index = 0;
+            } else if (_outputCode == 2){
+                index = 1;
+            } else if (_outputCode == 3){
+                index = 2;
+            } 
+            ICurveStableSwap3Crv(LP_TOKEN_POOL).remove_liquidity_one_coin(
+                _lpAmount,
+                index,
+                0,
+                true
+            );
         }
     }
-
 }

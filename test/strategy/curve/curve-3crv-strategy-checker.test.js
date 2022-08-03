@@ -7,5 +7,5 @@ describe('【Curve3CrvStrategy Strategy Checker】', function() {
         rewardsExchangePath.set(ADDRESS.CRV_ADDRESS, [ADDRESS.CRV_ADDRESS, ADDRESS.USDT_ADDRESS]);
         rewardsExchangePath.set(ADDRESS.WMATIC_ADDRESS, [ADDRESS.WMATIC_ADDRESS, ADDRESS.USDT_ADDRESS]);
         return checker.exchangeRewardToken(pendingRewards, harvesterAddress, valueInterpreter, rewardsExchangePath, ADDRESS.SUSHISWAP_ROUTER);
-    });
+    },null,2);
 });

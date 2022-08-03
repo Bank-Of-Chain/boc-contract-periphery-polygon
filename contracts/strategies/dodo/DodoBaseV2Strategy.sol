@@ -22,10 +22,7 @@ abstract contract DodoBaseV2Strategy is BaseClaimableStrategy, DodoPoolV2Actions
 
     function getQuoteLpToken() internal pure virtual returns (address);
 
-    function _initialize(
-        address _vault,
-        address _harvester
-    ) internal {
+    function _initialize(address _vault, address _harvester) internal {
         address[] memory _wants = new address[](2);
         address _lpTokenPool = getLpTokenPool();
         _wants[0] = DodoVaultV1(_lpTokenPool)._BASE_TOKEN_();
@@ -49,6 +46,13 @@ abstract contract DodoBaseV2Strategy is BaseClaimableStrategy, DodoPoolV2Actions
         _ratios = new uint256[](_assets.length);
         _ratios[0] = baseExpectedTarget;
         _ratios[1] = quoteExpectedTarget;
+    }
+
+    function getOutputsInfo() external view virtual override returns (OutputInfo[] memory outputsInfo) {
+        outputsInfo = new OutputInfo[](1);
+        OutputInfo memory info0 = outputsInfo[0];
+        info0.outputCode = 0;
+        info0.outputTokens = wants;
     }
 
     function getPositionDetail()
@@ -142,10 +146,7 @@ abstract contract DodoBaseV2Strategy is BaseClaimableStrategy, DodoPoolV2Actions
         }
     }
 
-    function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
-        internal
-        override
-    {
+    function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts) internal override {
         require(
             _assets.length == wants.length && _assets[0] == wants[0] && _assets[1] == wants[1],
             "need two token."
@@ -191,7 +192,11 @@ abstract contract DodoBaseV2Strategy is BaseClaimableStrategy, DodoPoolV2Actions
         }
     }
 
-    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares) internal override {
+    function withdrawFrom3rdPool(
+        uint256 _withdrawShares,
+        uint256 _totalShares,
+        uint256 _outputCode
+    ) internal override {
         address _lpTokenPool = getLpTokenPool();
         uint256 _baseWithdrawAmount = (balanceOfBaseLpToken() * _withdrawShares) / _totalShares;
         uint256 _quoteWithdrawAmount = (balanceOfQuoteLpToken() * _withdrawShares) / _totalShares;
@@ -231,5 +236,4 @@ abstract contract DodoBaseV2Strategy is BaseClaimableStrategy, DodoPoolV2Actions
             }
         }
     }
-
 }
