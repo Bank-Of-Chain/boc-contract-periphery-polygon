@@ -15,5 +15,6 @@ enum ProtocolEnum {
     Sushi,
     Synapse,
     Dodo,
-    Stargate
+    Stargate,
+    UniswapV3
 }

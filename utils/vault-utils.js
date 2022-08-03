@@ -47,6 +47,10 @@ const depositVault = async function (_farmer, _underlying, _vault, _amount) {
     });
     // const gasUsed = tx.receipt.gasUsed;
     // console.log('depositVault gasUsed: %d', gasUsed);
+
+    // transfer cash from vault buffer to vault
+    await _vault.startAdjustPosition();
+    await _vault.endAdjustPosition();
 }
 
 const depositMultCoinsToVault = async (_farmer, _vault, _underlyingArray, _amountsArray) => {
@@ -203,7 +207,7 @@ const lend = async (strategyAddress, vaultAddress, amount, exchangePlatformAdapt
 
     const wantsInfo = await strategy.getWantsInfo();
 
-    let strateAspect = new Array();
+    let strateAspect = [];
 
     const tokenMap = mapKeys(await Promise.all(map(wantsInfo[0], async (item, index) => {
         const token = await ERC20.at(item);
@@ -223,7 +227,7 @@ const lend = async (strategyAddress, vaultAddress, amount, exchangePlatformAdapt
 
     let path = await lendSwap.getAspectArray(BigNumber.from(amount), strateAspect, yyj, tokenMap);
     if (path.length < 1) {
-        path = new Array();
+        path = [];
         path.push({fromToken: MFC.USDT_ADDRESS, toToken: MFC.USDT_ADDRESS, fromAmount: BigNumber.from(amount)});
     }
     const nextPath = map(path, i => {
