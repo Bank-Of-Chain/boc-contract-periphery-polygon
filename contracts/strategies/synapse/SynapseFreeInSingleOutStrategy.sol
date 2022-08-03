@@ -142,7 +142,7 @@ abstract contract SynapseFreeInSingleOutStrategy is BaseClaimableStrategy {
     }
 
 
-    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares) internal override {
+    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares,uint256 _outputCode) internal override {
         //release the stake of lp token
         (uint256 lpAmountStakeInChef, ) = miniChef.userInfo(poolId, address(this));
         uint256 lpAmountToWithdraw = (_withdrawShares * lpAmountStakeInChef) / _totalShares;

@@ -30,9 +30,9 @@ abstract contract BalancerFreeInSingleOutStrategy is BaseClaimableStrategy {
 
     address public constant BAL = address(0x9a71012B13CA4d3D0Cdc72A177DF3ef03b0E76A3);
     IBalancerVault public constant BALANCER_VAULT =
-    IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
+        IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
     IBalancerHelper public constant BALANCER_HELPER =
-    IBalancerHelper(0x94905e703fEAd7f0fD0eEe355D267eE909784e6d);
+        IBalancerHelper(0x94905e703fEAd7f0fD0eEe355D267eE909784e6d);
 
     uint256 public exitTokenIndex;
     //measured by underlying token
@@ -62,7 +62,7 @@ abstract contract BalancerFreeInSingleOutStrategy is BaseClaimableStrategy {
 
         super._initialize(_vault, _harvester, uint16(ProtocolEnum.Balancer), _wants);
 
-        (address[] memory tokens, ,) = BALANCER_VAULT.getPoolTokens(_poolId);
+        (address[] memory tokens, , ) = BALANCER_VAULT.getPoolTokens(_poolId);
         poolAssets = new IAsset[](tokens.length);
         for (uint256 i = 0; i < tokens.length; i++) {
             poolAssets[i] = IAsset(tokens[i]);
@@ -74,41 +74,68 @@ abstract contract BalancerFreeInSingleOutStrategy is BaseClaimableStrategy {
         isWantRatioIgnorable = true;
     }
 
-    function getPoolGauge() virtual public pure returns (address);
+    function getPoolGauge() public pure virtual returns (address);
 
     function getWantsInfo()
-    external
-    view
-    override
-    returns (address[] memory _assets, uint256[] memory _ratios)
+        external
+        view
+        override
+        returns (address[] memory _assets, uint256[] memory _ratios)
     {
-        (_assets, _ratios,) = BALANCER_VAULT.getPoolTokens(poolId);
+        (_assets, _ratios, ) = BALANCER_VAULT.getPoolTokens(poolId);
+    }
+
+    function getOutputsInfo() external view virtual override returns (OutputInfo[] memory outputsInfo) {
+        outputsInfo = new OutputInfo[](5);
+        OutputInfo memory info0 = outputsInfo[0];
+        info0.outputCode = 0;
+        info0.outputTokens = wants;
+
+        OutputInfo memory info1 = outputsInfo[1];
+        info1.outputCode = 1;
+        info1.outputTokens = new address[](1);
+        info1.outputTokens[0] = wants[0];
+
+        OutputInfo memory info2 = outputsInfo[2];
+        info2.outputCode = 2;
+        info2.outputTokens = new address[](1);
+        info2.outputTokens[0] = wants[1];
+
+        OutputInfo memory info3 = outputsInfo[3];
+        info3.outputCode = 3;
+        info3.outputTokens = new address[](1);
+        info3.outputTokens[0] = wants[2];
+
+        OutputInfo memory info4 = outputsInfo[4];
+        info4.outputCode = 4;
+        info4.outputTokens = new address[](1);
+        info4.outputTokens[0] = wants[3];
     }
 
     function getPositionDetail()
-    public
-    view
-    override
-    returns (
-        address[] memory _tokens,
-        uint256[] memory _amounts,
-        bool isUsd,
-        uint256 usdValue
-    )
+        public
+        view
+        override
+        returns (
+            address[] memory _tokens,
+            uint256[] memory _amounts,
+            bool isUsd,
+            uint256 usdValue
+        )
     {
-        address _exitToken = exitToken;
-        _tokens = new address[](1);
-        _tokens[0] = _exitToken;
-
-        _amounts = new uint256[](1);
-        _amounts[0] = balanceOfToken(_exitToken) + _deposited3rdAssets;
+        (, _amounts, ) = BALANCER_VAULT.getPoolTokens(poolId);
+        _tokens = wants;
+        
+        uint256 lpBalance = IERC20Upgradeable(getPoolGauge()).balanceOf(address(this));
+        uint256 lpTotalSupply = IERC20Upgradeable(poolLpToken).totalSupply();
+        for (uint256 i = 0; i < _tokens.length; i++) {
+            _amounts[i] = (_amounts[i] * lpBalance) / lpTotalSupply + balanceOfToken(_tokens[i]);
+        }
     }
 
     function get3rdPoolAssets() external view override returns (uint256) {
         uint256 totalAssets;
-        (address[] memory tokens, uint256[] memory balances,) = BALANCER_VAULT.getPoolTokens(
-            poolId
-        );
+        (address[] memory tokens, uint256[] memory balances, ) = BALANCER_VAULT.getPoolTokens(poolId);
         for (uint8 i = 0; i < tokens.length; i++) {
             totalAssets += queryTokenValue(tokens[i], balances[i]);
         }
@@ -116,12 +143,12 @@ abstract contract BalancerFreeInSingleOutStrategy is BaseClaimableStrategy {
     }
 
     function claimRewards()
-    internal
-    override
-    returns (address[] memory _rewardsTokens, uint256[] memory _claimAmounts)
+        internal
+        override
+        returns (address[] memory _rewardsTokens, uint256[] memory _claimAmounts)
     {
         IStakingLiquidityGauge(getPoolGauge()).claim_rewards();
-        console.log('--------balanceOfToken(BAL):%d',balanceOfToken(BAL));
+        console.log("--------balanceOfToken(BAL):%d", balanceOfToken(BAL));
         address[] memory extraRewardTokensCopy = extraRewardTokens;
         _rewardsTokens = new address[](extraRewardTokensCopy.length + 1);
         _rewardsTokens[0] = BAL;
@@ -133,13 +160,9 @@ abstract contract BalancerFreeInSingleOutStrategy is BaseClaimableStrategy {
             _claimAmounts[i] = balanceOfToken(_rewardsTokens[i]);
             console.log("_claimAmount:%d", _claimAmounts[i]);
         }
-        _updateDeposited3rdAssets();
     }
 
-    function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
-    internal
-    override
-    {
+    function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts) internal override {
         for (uint256 i = 0; i < _assets.length; i++) {
             uint256 amount = _amounts[i];
             if (amount > 0) {
@@ -150,84 +173,48 @@ abstract contract BalancerFreeInSingleOutStrategy is BaseClaimableStrategy {
             }
         }
 
-        // uint256[] memory maxAmountsIn = new uint256[](poolAssets.length);
-        // maxAmountsIn[exitTokenIndex] = _amounts[0];
         IBalancerVault.JoinPoolRequest memory joinRequest = IBalancerVault.JoinPoolRequest({
-        assets : poolAssets,
-        maxAmountsIn : _amounts,
-        userData : abi.encode(JoinKind.EXACT_TOKENS_IN_FOR_BPT_OUT, _amounts, 0),
-        fromInternalBalance : false
+            assets: poolAssets,
+            maxAmountsIn: _amounts,
+            userData: abi.encode(JoinKind.EXACT_TOKENS_IN_FOR_BPT_OUT, _amounts, 0),
+            fromInternalBalance: false
         });
-//        console.log(
-//            "assets.length:%d,maxAmountsIn.length:%d",
-//            joinRequest.assets.length,
-//            joinRequest.maxAmountsIn.length
-//        );
         BALANCER_VAULT.joinPool(poolId, address(this), address(this), joinRequest);
 
         address poolGauge = getPoolGauge();
         address poolLpTokenCopy = poolLpToken;
+        uint256 lpAmount = balanceOfToken(poolLpTokenCopy);
         IERC20Upgradeable(poolLpTokenCopy).safeApprove(poolGauge, 0);
-        IERC20Upgradeable(poolLpTokenCopy).safeApprove(poolGauge, balanceOfToken(poolLpTokenCopy));
-        IStakingLiquidityGauge(poolGauge).deposit(balanceOfToken(poolLpTokenCopy));
-        _updateDeposited3rdAssets();
+        IERC20Upgradeable(poolLpTokenCopy).safeApprove(poolGauge, lpAmount);
+        IStakingLiquidityGauge(poolGauge).deposit(lpAmount);
     }
 
-    //balancerHelper.queryExit is NOT a view function,so we need to record the value when deposit assets changed
-    function _updateDeposited3rdAssets() internal {
-        uint256 balanceOfLp = IStakingLiquidityGauge(getPoolGauge()).balanceOf(address(this));
-        if (balanceOfLp == 0) {
-            _deposited3rdAssets = 0;
-            return;
-        }
-        console.log("btpAmountOut=%d", balanceOfLp);
-        address payable recipient = payable(address(this));
-        uint256[] memory minAmountsOut = new uint256[](poolAssets.length);
-        IBalancerVault.ExitPoolRequest memory exitRequest = IBalancerVault.ExitPoolRequest({
-        assets : poolAssets,
-        minAmountsOut : minAmountsOut,
-        userData : abi.encode(
-                ExitKind.EXACT_BPT_IN_FOR_ONE_TOKEN_OUT,
-                balanceOfLp,
-                exitTokenIndex
-            ),
-        toInternalBalance : false
-        });
-
-        //query how much underlying token will received when exitPool
-        (uint256 bptIn, uint256[] memory amountsOut) = BALANCER_HELPER.queryExit(
-            poolId,
-            address(this),
-            recipient,
-            exitRequest
-        );
-        console.log("bptIn:%d", bptIn);
-        _deposited3rdAssets = amountsOut[exitTokenIndex];
-        console.log("_deposited3rdAssets:%d", _deposited3rdAssets);
-    }
-
-    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares) internal override {
+    function withdrawFrom3rdPool(
+        uint256 _withdrawShares,
+        uint256 _totalShares,
+        uint256 _outputCode
+    ) internal override {
         IStakingLiquidityGauge gauge = IStakingLiquidityGauge(getPoolGauge());
         uint256 _lpAmount = (gauge.balanceOf(address(this)) * _withdrawShares) / _totalShares;
-        if (_lpAmount > 0) {
-            gauge.withdraw(_lpAmount);
-            address payable recipient = payable(address(this));
-            uint256[] memory minAmountsOut = new uint256[](poolAssets.length);
-            IBalancerVault.ExitPoolRequest memory exitRequest = IBalancerVault.ExitPoolRequest({
-            assets : poolAssets,
-            minAmountsOut : minAmountsOut,
-            userData : abi.encode(
-                    ExitKind.EXACT_BPT_IN_FOR_ONE_TOKEN_OUT,
-                    _lpAmount,
-                    exitTokenIndex
-                ),
-            toInternalBalance : false
+        gauge.withdraw(_lpAmount);
+        address payable recipient = payable(address(this));
+        uint256[] memory minAmountsOut = new uint256[](poolAssets.length);
+        IBalancerVault.ExitPoolRequest memory exitRequest;
+        if (_outputCode == 0){
+            exitRequest = IBalancerVault.ExitPoolRequest({
+                assets: poolAssets,
+                minAmountsOut: minAmountsOut,
+                userData: abi.encode(ExitKind.EXACT_BPT_IN_FOR_TOKENS_OUT, _lpAmount),
+                toInternalBalance: false
             });
-            BALANCER_VAULT.exitPool(poolId, address(this), recipient, exitRequest);
-
-            console.log("underlying balance:%d", balanceOfToken(wants[0]));
-            _updateDeposited3rdAssets();
+        } else {
+            exitRequest = IBalancerVault.ExitPoolRequest({
+                assets: poolAssets,
+                minAmountsOut: minAmountsOut,
+                userData: abi.encode(ExitKind.EXACT_BPT_IN_FOR_ONE_TOKEN_OUT, _lpAmount, _outputCode - 1),
+                toInternalBalance: false
+            });
         }
+        BALANCER_VAULT.exitPool(poolId, address(this), recipient, exitRequest);
     }
-
 }

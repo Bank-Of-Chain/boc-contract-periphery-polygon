@@ -46,6 +46,19 @@ abstract contract StargateBaseStrategy is BaseClaimableStrategy {
         _ratios[0] = 1e18;
     }
 
+    function getOutputsInfo()
+        external
+        view
+        virtual
+        override
+        returns (OutputInfo[] memory outputsInfo)
+    {
+        outputsInfo = new OutputInfo[](1);
+        OutputInfo memory info0 = outputsInfo[0];
+        info0.outputCode = 0;
+        info0.outputTokens = wants;
+    }
+
     function getPositionDetail() public view override returns (
         address[] memory _tokens,
         uint256[] memory _amounts,
@@ -99,7 +112,7 @@ abstract contract StargateBaseStrategy is BaseClaimableStrategy {
         }
     }
 
-    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares) internal override {
+    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares,uint256 _outputCode) internal override {
         uint256 _lpAmount = (balanceOfLpToken() * _withdrawShares) / _totalShares;
         if (_lpAmount > 0) {
             // unstake liquidity
