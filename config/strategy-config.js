@@ -78,6 +78,12 @@ const strategiesList = [
         addToVault: true,
     },
     {
+        name: "DodoUsdtUsdcV2Strategy",
+        profitLimitRatio: 100,
+        lossLimitRatio: 100,
+        addToVault: true,
+    },
+    {
         name: "UniswapV3DaiUsdc100Strategy",
         profitLimitRatio: 100,
         lossLimitRatio: 100,
