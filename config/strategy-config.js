@@ -77,6 +77,12 @@ const strategiesList = [
         lossLimitRatio: 100,
         addToVault: true,
     },
+    {
+        name: "DodoUsdtUsdcV2Strategy",
+        profitLimitRatio: 100,
+        lossLimitRatio: 100,
+        addToVault: true,
+    },
 ]
 
 exports.strategiesList = strategiesList
