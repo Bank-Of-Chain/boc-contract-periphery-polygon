@@ -14,11 +14,11 @@ contract DodoUsdtUsdcV2Strategy is DodoBaseV2Strategy {
     }
 
     function getBaseStakePoolAddress() internal pure override returns (address) {
-        return 0x3E14D20C3052F9f70B57F148b408927e5b196068;
+        return 0xCd288Dd48d26a9f671a1a06bcc48c2A3ee800A13;
     }
 
     function getQuoteStakePoolAddress() internal pure override returns (address) {
-        return 0xA2e116e5BFF780CB531C5A99F207543DCf70BD86;
+        return 0xF4Ae5322eD8B0af7A4f5161caf33C4894752F0f5;
     }
 
     function getBaseLpToken() internal pure override returns (address) {
