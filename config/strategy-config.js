@@ -83,6 +83,30 @@ const strategiesList = [
         lossLimitRatio: 100,
         addToVault: true,
     },
+    {
+        name: "UniswapV3DaiUsdc100Strategy",
+        profitLimitRatio: 100,
+        lossLimitRatio: 100,
+        addToVault: true,
+    },
+    {
+        name: "UniswapV3DaiUsdc500Strategy",
+        profitLimitRatio: 100,
+        lossLimitRatio: 100,
+        addToVault: true,
+    },
+    {
+        name: "UniswapV3UsdcUsdt100Strategy",
+        profitLimitRatio: 100,
+        lossLimitRatio: 100,
+        addToVault: true,
+    },
+    {
+        name: "UniswapV3UsdcUsdt500Strategy",
+        profitLimitRatio: 100,
+        lossLimitRatio: 100,
+        addToVault: true,
+    }
 ]
 
 exports.strategiesList = strategiesList

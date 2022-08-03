@@ -15,12 +15,12 @@ const AggregatedDerivativePriceFeed = hre.artifacts.require('AggregatedDerivativ
 const ValueInterpreter = hre.artifacts.require('ValueInterpreter');
 const MockVault = hre.artifacts.require('contracts/mock/MockVault.sol:MockVault');
 const IUniswapV2 = hre.artifacts.require('IUniswapV2');
-
-const ZERO_BN = new BigNumber(0);
+const MockUniswapV3Router = hre.artifacts.require('contracts/mock/MockUniswapV3Router.sol:MockUniswapV3Router');
 
 let accessControlProxy;
 let valueInterpreter;
 let mockVault;
+let mockUniswapV3Router;
 let strategy;
 
 let governance;
@@ -105,7 +105,7 @@ async function _topUpFamilyBucket() {
     console.log('topUp finish!');
 }
 
-async function check(strategyName, callback, exchangeRewardTokenCallback) {
+async function check(strategyName, callback, exchangeRewardTokenCallback, uniswapV3RebalanceCallback) {
     before(async function () {
         accounts = await ethers.getSigners();
         governance = accounts[0].address;
@@ -122,6 +122,8 @@ async function check(strategyName, callback, exchangeRewardTokenCallback) {
         // init mockVault
         mockVault = await MockVault.new(accessControlProxy.address, valueInterpreter.address);
         console.log('mock vault address:%s', mockVault.address);
+        // init mockUniswapV3Router
+        mockUniswapV3Router = await MockUniswapV3Router.new();
         // init strategy
         const Strategy = hre.artifacts.require(strategyName);
         strategy = await Strategy.new();
@@ -190,8 +192,9 @@ async function check(strategyName, callback, exchangeRewardTokenCallback) {
             }
         }
         console.log('Lend:',depositedAssets,depositedAmounts);
-        
+
         await mockVault.lend(strategy.address, depositedAssets, depositedAmounts);
+        await advanceBlock(1);
         const estimatedTotalAssets = new BigNumber(await strategy.estimatedTotalAssets()).dividedBy(10 ** 18);
         depositUSD = depositUSD.dividedBy(10 ** 18);
         let delta = depositUSD.minus(estimatedTotalAssets);
@@ -235,6 +238,12 @@ async function check(strategyName, callback, exchangeRewardTokenCallback) {
         console.log('beforeTotalAssets:%s,afterTotalAssets:%s,produceReward:%s', beforeTotalAssets.toFixed(), afterTotalAssets.toFixed(), produceReward);
         assert(afterTotalAssets.isGreaterThan(beforeTotalAssets) || produceReward, 'there is no profit after 3 days');
     });
+
+    if (uniswapV3RebalanceCallback) {
+        it('[UniswapV3 rebalance]', async function () {
+            await uniswapV3RebalanceCallback(strategy.address);
+        });
+    }
 
     it('[estimatedTotalAssets should be 0 after withdraw all assets]', async function () {
         const estimatedTotalAssets0 = new BigNumber(await strategy.estimatedTotalAssets());
