@@ -56,6 +56,8 @@
     "coverage": "hardhat coverage",
     "docgen": "hardhat docgen",
     "topup": "hardhat run scripts/top-up.js --network localhost",
+    "adapter_add": "hardhat run scripts/test-adapter-add.js --network localhost",
+    "adapter_remove": "hardhat run scripts/test-adapter-remove.js --network localhost",
     "deploy": "yarn topup && hardhat run scripts/deploy.js --network localhost ",
     "deploy_v1.5.4": "yarn topup && npm run grant && hardhat run scripts/deploy_v1.5.4.js --network localhost",
     "migrate-usdi-to-pegtoken": "yarn topup && yarn grant && yarn update-aggregator && hardhat run scripts/migrate-usdi-to-pegtoken.js --network localhost",
