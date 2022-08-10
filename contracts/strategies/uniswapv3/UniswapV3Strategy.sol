@@ -16,7 +16,7 @@ import "../../utils/actions/UniswapV3LiquidityActionsMixin.sol";
 import "./../../enums/ProtocolEnum.sol";
 import "hardhat/console.sol";
 
-abstract contract UniswapV3BaseStrategy is BaseClaimableStrategy, UniswapV3LiquidityActionsMixin {
+contract UniswapV3Strategy is BaseClaimableStrategy, UniswapV3LiquidityActionsMixin {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     event UniV3SetBaseThreshold(int24 _baseThreshold);
@@ -31,6 +31,7 @@ abstract contract UniswapV3BaseStrategy is BaseClaimableStrategy, UniswapV3Liqui
     int24 public minTickMove;
     int24 public maxTwapDeviation;
     int24 public lastTick;
+    int24 public tickSpacing;
     uint256 public period;
     uint256 public lastTimestamp;
     uint32 public twapDuration;
@@ -44,31 +45,32 @@ abstract contract UniswapV3BaseStrategy is BaseClaimableStrategy, UniswapV3Liqui
     MintInfo public baseMintInfo;
     MintInfo public limitMintInfo;
 
-    function _initialize(
+    function initialize(
         address _vault,
         address _harvester,
+        string memory _name,
         address _pool,
         int24 _baseThreshold,
         int24 _limitThreshold,
         uint256 _period,
         int24 _minTickMove,
         int24 _maxTwapDeviation,
-        uint32 _twapDuration
-    ) internal {
+        uint32 _twapDuration,
+        int24 _tickSpacing
+    ) external initializer {
         _initializeUniswapV3Liquidity(_pool);
         address[] memory _wants = new address[](2);
         _wants[0] = token0;
         _wants[1] = token1;
-        super._initialize(_vault, _harvester, uint16(ProtocolEnum.UniswapV3), _wants);
+        super._initialize(_vault, _harvester, _name, uint16(ProtocolEnum.UniswapV3), _wants);
         baseThreshold = _baseThreshold;
         limitThreshold = _limitThreshold;
         period = _period;
         minTickMove = _minTickMove;
         maxTwapDeviation = _maxTwapDeviation;
         twapDuration = _twapDuration;
+        tickSpacing = _tickSpacing;
     }
-
-    function getTickSpacing() internal pure virtual returns (int24);
 
     function getVersion() external pure override returns (string memory) {
         return "1.0.0";
@@ -116,7 +118,7 @@ abstract contract UniswapV3BaseStrategy is BaseClaimableStrategy, UniswapV3Liqui
         )
     {
         tickFloor = _floor(tick);
-        tickCeil = tickFloor + getTickSpacing();
+        tickCeil = tickFloor + tickSpacing;
         tickLower = tickFloor - baseThreshold;
         tickUpper = tickCeil + baseThreshold;
     }
@@ -331,8 +333,8 @@ abstract contract UniswapV3BaseStrategy is BaseClaimableStrategy, UniswapV3Liqui
         // check price not too close to boundary
         int24 maxThreshold = baseThreshold > limitThreshold ? baseThreshold : limitThreshold;
         if (
-            tick < TickMath.MIN_TICK + maxThreshold + getTickSpacing() ||
-            tick > TickMath.MAX_TICK - maxThreshold - getTickSpacing()
+            tick < TickMath.MIN_TICK + maxThreshold + tickSpacing ||
+            tick > TickMath.MAX_TICK - maxThreshold - tickSpacing
         ) {
             return false;
         }
@@ -370,9 +372,9 @@ abstract contract UniswapV3BaseStrategy is BaseClaimableStrategy, UniswapV3Liqui
     // Rounds tick down towards negative infinity so that it's a multiple of `tickSpacing`.
     function _floor(int24 tick) internal view returns (int24) {
         // compressed=-27633, tick=-276330, tickSpacing=10
-        int24 compressed = tick / getTickSpacing();
-        if (tick < 0 && tick % getTickSpacing() != 0) compressed--;
-        return compressed * getTickSpacing();
+        int24 compressed = tick / tickSpacing;
+        if (tick < 0 && tick % tickSpacing != 0) compressed--;
+        return compressed * tickSpacing;
     }
 
     function mintNewPosition(
@@ -411,9 +413,9 @@ abstract contract UniswapV3BaseStrategy is BaseClaimableStrategy, UniswapV3Liqui
         }
     }
 
-    function _checkThreshold(int24 _threshold) internal pure {
+    function _checkThreshold(int24 _threshold) internal view {
         require(
-            _threshold > 0 && _threshold <= TickMath.MAX_TICK && _threshold % getTickSpacing() == 0,
+            _threshold > 0 && _threshold <= TickMath.MAX_TICK && _threshold % tickSpacing == 0,
             "threshold validate error"
         );
     }

@@ -17,7 +17,7 @@ const MFC_TEST = require('../config/mainnet-fork-test-config');
 const MFC_PRODUCTION = require('../config/mainnet-fork-config');
 const {
 	strategiesList
-} = require('../config/strategy-config.js');
+} = require('../config/strategy/strategy-config.js');
 
 const {
 	deploy,
@@ -46,9 +46,9 @@ const Dripper = 'Dripper';
 const USDT_ADDRESS = 'USDT_ADDRESS';
 const Verification = 'Verification';
 const INITIAL_ASSET_LIST = [
-    MFC_PRODUCTION.USDT_ADDRESS,
-    MFC_PRODUCTION.USDC_ADDRESS,
-    MFC_PRODUCTION.DAI_ADDRESS,
+	MFC_PRODUCTION.USDT_ADDRESS,
+	MFC_PRODUCTION.USDC_ADDRESS,
+	MFC_PRODUCTION.DAI_ADDRESS,
 ]
 
 // Used to store address information during deployment
@@ -81,7 +81,7 @@ const addressMap = {
 	[ParaSwapV5Adapter]: '',
 	[ExchangeAggregator]: '',
 	[Treasury]: '',
-    [PegToken]: '',
+	[PegToken]: '',
 	[Vault]: '',
 	[VaultBuffer]: '',
 	[Harvester]: '',
@@ -95,7 +95,7 @@ const addressMap = {
  * @param {string} dependName Name of the dependency
  * @returns
  */
- const addDependAddress = async (dependName) => {
+const addDependAddress = async (dependName) => {
 	const questions = [{
 		type: 'input',
 		name: 'address',
@@ -155,20 +155,20 @@ const depolyBase = async (contractName, depends = []) => {
 			name: 'confirm',
 			message: `${contractName} The contract release failed, do you want to retry？\n`,
 			choices: [{
-					key: 'y',
-					name: 'Try again',
-					value: 1,
-				},
-				{
-					key: 'n',
-					name: 'Exit Deployment',
-					value: 2,
-				},
-				{
-					key: 's',
-					name: 'Ignore this deployment exception',
-					value: 3,
-				},
+				key: 'y',
+				name: 'Try again',
+				value: 1,
+			},
+			{
+				key: 'n',
+				name: 'Exit Deployment',
+				value: 2,
+			},
+			{
+				key: 's',
+				name: 'Ignore this deployment exception',
+				value: 3,
+			},
 			],
 		}];
 
@@ -191,25 +191,29 @@ const depolyBase = async (contractName, depends = []) => {
  * @param {string} contractName Contract Name
  * @param {string[]} depends Contract Fronting Dependency
  */
-const deployProxyBase = async (contractName, depends = []) => {
+const deployProxyBase = async (contractName, depends = [], customParams = [], name = null) => {
 	console.log(` 🛰  Deploying[Proxy]: ${contractName}`);
 	const keyArray = keys(addressMap);
-	const nextParams = [];
+	const dependParams = [];
 	for (const depend of depends) {
 		if (includes(keyArray, depend)) {
 			if (isEmpty(get(addressMap, depend))) {
 				await addDependAddress(depend);
 			}
-			nextParams.push(addressMap[depend]);
+			dependParams.push(addressMap[depend]);
 			continue;
 		}
-		nextParams.push(depend);
+		dependParams.push(depend);
 	}
 
 	try {
-		const constract = await deployProxy(contractName, nextParams);
+		const allParams = [
+			...dependParams,
+			...customParams
+		];
+		const constract = await deployProxy(contractName, allParams);
 		await constract.deployed();
-		addressMap[contractName] = constract.address;
+		addressMap[name == null ? contractName : name] = constract.address;
 		return constract;
 	} catch (error) {
 		console.log('Contract Deployment Exceptions：', error);
@@ -218,20 +222,20 @@ const deployProxyBase = async (contractName, depends = []) => {
 			name: 'confirm',
 			message: `${contractName} The contract release failed, do you want to retry？\n`,
 			choices: [{
-					key: 'y',
-					name: 'Try again',
-					value: 1,
-				},
-				{
-					key: 'n',
-					name: 'Exit Deployment',
-					value: 2,
-				},
-				{
-					key: 's',
-					name: 'Ignore this deployment exception',
-					value: 3,
-				},
+				key: 'y',
+				name: 'Try again',
+				value: 1,
+			},
+			{
+				key: 'n',
+				name: 'Exit Deployment',
+				value: 2,
+			},
+			{
+				key: 's',
+				name: 'Ignore this deployment exception',
+				value: 3,
+			},
 			],
 		}];
 
@@ -304,33 +308,33 @@ const addStrategies = async (vault, allArray, increaseArray) => {
 		const nextArray = type === 1 ? allArray : increaseArray
 
 		return vault.addStrategy(nextArray.map(item => {
-		    return {
-		        strategy: item.strategy,
-		        profitLimitRatio: item.profitLimitRatio,
-		        lossLimitRatio: item.lossLimitRatio
-		    }
+			return {
+				strategy: item.strategy,
+				profitLimitRatio: item.profitLimitRatio,
+				lossLimitRatio: item.lossLimitRatio
+			}
 		}));
 	})
 }
 
 const main = async () => {
 	let verification;
-    let vault;
-    let vaultAdmin;
+	let vault;
+	let vaultAdmin;
 	let vaultBuffer;
-    let accessControlProxy;
-    let chainlinkPriceFeed;
-    let aggregatedDerivativePriceFeed;
-    let oneInchV4Adapter;
-    let paraSwapV5Adapter;
-    let valueInterpreter;
-    let treasury;
-    let exchangeAggregator;
-    let pegToken;
-    let harvester;
-    let dripper;
+	let accessControlProxy;
+	let chainlinkPriceFeed;
+	let aggregatedDerivativePriceFeed;
+	let oneInchV4Adapter;
+	let paraSwapV5Adapter;
+	let valueInterpreter;
+	let treasury;
+	let exchangeAggregator;
+	let pegToken;
+	let harvester;
+	let dripper;
 
-    const network = hre.network.name;
+	const network = hre.network.name;
 	const MFC = network === 'localhost' || network === 'hardhat' ? MFC_TEST : MFC_PRODUCTION
 	console.log('\n\n 📡 Deploying... At %s Network \n', network);
 	const accounts = await ethers.getSigners();
@@ -339,7 +343,7 @@ const main = async () => {
 	const keeper = process.env.KEEPER_ACCOUNT_ADDRESS || get(accounts, '19.address', '');
 
 	if (isEmpty(addressMap[AccessControlProxy])) {
-		accessControlProxy = await deployProxyBase(AccessControlProxy, [management,management,management,keeper]);
+		accessControlProxy = await deployProxyBase(AccessControlProxy, [management, management, management, keeper]);
 	}
 
 	if (isEmpty(addressMap[ChainlinkPriceFeed])) {
@@ -398,8 +402,8 @@ const main = async () => {
 		exchangeAggregator = await depolyBase(ExchangeAggregator, [adapterArray, AccessControlProxy]);
 	}
 
-    if (isEmpty(addressMap[VaultAdmin])) {
-	    vaultAdmin = await depolyBase(VaultAdmin);
+	if (isEmpty(addressMap[VaultAdmin])) {
+		vaultAdmin = await depolyBase(VaultAdmin);
 	}
 
 	if (isEmpty(addressMap[Treasury])) {
@@ -409,28 +413,28 @@ const main = async () => {
 	let cVault;
 	if (isEmpty(addressMap[Vault])) {
 		vault = await deployProxyBase(Vault, [AccessControlProxy, Treasury, ExchangeAggregator, ValueInterpreter]);
-	    cVault = await VaultContract.at(addressMap[Vault]);
+		cVault = await VaultContract.at(addressMap[Vault]);
 		await vault.setAdminImpl(vaultAdmin.address);
-        for (let i = 0; i < INITIAL_ASSET_LIST.length; i++) {
-            const asset = INITIAL_ASSET_LIST[i];
-            await cVault.addAsset(asset);
-        }
-	}else{
+		for (let i = 0; i < INITIAL_ASSET_LIST.length; i++) {
+			const asset = INITIAL_ASSET_LIST[i];
+			await cVault.addAsset(asset);
+		}
+	} else {
 		cVault = await VaultContract.at(addressMap[Vault]);
 	}
 
-    if (isEmpty(addressMap[PegToken])) {
+	if (isEmpty(addressMap[PegToken])) {
 		console.log(` 🛰  Deploying[Proxy]: ${PegToken}`);
 		console.log('vault address=', addressMap[Vault]);
-		pegToken = await deployProxy(PegToken, ["USD Peg Token", "USDi", 18, addressMap[Vault], addressMap[AccessControlProxy]], {timeout: 0});
+		pegToken = await deployProxy(PegToken, ["USD Peg Token", "USDi", 18, addressMap[Vault], addressMap[AccessControlProxy]], { timeout: 0 });
 		await pegToken.deployed();
 		addressMap[PegToken] = pegToken.address;
 		await cVault.setPegTokenAddress(addressMap[PegToken]);
 		await cVault.setRebaseThreshold(1);
 		await cVault.setUnderlyingUnitsPerShare(new BigNumber(10).pow(18).toFixed());
 		await cVault.setMaxTimestampBetweenTwoReported(604800);
-		console.log("maxTimestampBetweenTwoReported:",new BigNumber(await cVault.maxTimestampBetweenTwoReported()).toFixed());
-    }
+		console.log("maxTimestampBetweenTwoReported:", new BigNumber(await cVault.maxTimestampBetweenTwoReported()).toFixed());
+	}
 
 	if (isEmpty(addressMap[VaultBuffer])) {
 		console.log(` 🛰  Deploying[Proxy]: ${VaultBuffer}`);
@@ -440,11 +444,11 @@ const main = async () => {
 		await vaultBuffer.deployed();
 		addressMap[VaultBuffer] = vaultBuffer.address;
 		await cVault.setVaultBufferAddress(addressMap[VaultBuffer]);
-	 }
+	}
 
 	if (isEmpty(addressMap[Dripper])) {
-	    dripper = await deployProxyBase(Dripper, [AccessControlProxy, Vault, USDT_ADDRESS]);
-	    await dripper.setDripDuration(7 * 24 * 60 * 60);
+		dripper = await deployProxyBase(Dripper, [AccessControlProxy, Vault, USDT_ADDRESS]);
+		await dripper.setDripDuration(7 * 24 * 60 * 60);
 	}
 
 	if (isEmpty(addressMap[Harvester])) {
@@ -456,13 +460,15 @@ const main = async () => {
 	for (const strategyItem of strategiesList) {
 		const {
 			name,
+			contract,
 			addToVault,
 			profitLimitRatio,
 			lossLimitRatio,
+			customParams
 		} = strategyItem
 		let strategyAddress = addressMap[name];
 		if (isEmpty(strategyAddress)) {
-			const deployStrategy = await deployProxyBase(name, [Vault, Harvester]);
+			const deployStrategy = await deployProxyBase(contract, [Vault, Harvester], [name, ...customParams],name);
 			if (addToVault) {
 				strategyAddress = deployStrategy.address;
 				increaseArray.push({

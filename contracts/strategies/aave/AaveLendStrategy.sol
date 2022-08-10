@@ -13,21 +13,22 @@ import "./../../external/aave/IAToken.sol";
 import "./../../external/aave/ILendingPool.sol";
 import "./../../external/aave/IAaveIncentivesController.sol";
 
-abstract contract AaveBaseStrategy is BaseClaimableStrategy {
+contract AaveLendStrategy is BaseClaimableStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     address internal aToken;
     ILendingPool public lendingPool;
     IAaveIncentivesController public incentivesController;
 
-    function _initialize(
+    function initialize(
         address _vault,
         address _harvester,
+        string memory _name,
         address _underlyingToken,
         address _aToken,
         address _lendingPool,
         address _incentivesController
-    ) internal {
+    ) external initializer {
         require(_underlyingToken != address(0), "underlyingToken cannot be 0.");
         require(_aToken != address(0), "aToken cannot be 0.");
         require(_lendingPool != address(0), "lendingPool cannot be 0.");
@@ -35,7 +36,7 @@ abstract contract AaveBaseStrategy is BaseClaimableStrategy {
 
         address[] memory _wants = new address[](1);
         _wants[0] = _underlyingToken;
-        super._initialize(_vault, _harvester, uint16(ProtocolEnum.Aave), _wants);
+        super._initialize(_vault, _harvester, _name, uint16(ProtocolEnum.Aave), _wants);
 
         aToken = _aToken;
         lendingPool = ILendingPool(_lendingPool);
@@ -57,13 +58,7 @@ abstract contract AaveBaseStrategy is BaseClaimableStrategy {
         _ratios[0] = decimalUnitOfToken(_assets[0]);
     }
 
-    function getOutputsInfo()
-        external
-        view
-        virtual
-        override
-        returns (OutputInfo[] memory outputsInfo)
-    {
+    function getOutputsInfo() external view virtual override returns (OutputInfo[] memory outputsInfo) {
         outputsInfo = new OutputInfo[](1);
         OutputInfo memory info0 = outputsInfo[0];
         info0.outputCode = 0;
@@ -117,10 +112,7 @@ abstract contract AaveBaseStrategy is BaseClaimableStrategy {
         }
     }
 
-    function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
-        internal
-        override
-    {
+    function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts) internal override {
         require(_assets.length == 1 && _assets[0] == wants[0], "just need one token.");
         if (_amounts[0] > 0) {
             IERC20Upgradeable(_assets[0]).safeApprove(address(lendingPool), 0);
@@ -129,11 +121,14 @@ abstract contract AaveBaseStrategy is BaseClaimableStrategy {
         }
     }
 
-    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares,uint256 _outputCode) internal override {
+    function withdrawFrom3rdPool(
+        uint256 _withdrawShares,
+        uint256 _totalShares,
+        uint256 _outputCode
+    ) internal override {
         uint256 _lpAmount = (balanceOfLpToken() * _withdrawShares) / _totalShares;
         if (_lpAmount > 0) {
             lendingPool.withdraw(wants[0], _lpAmount, address(this));
         }
     }
-
 }

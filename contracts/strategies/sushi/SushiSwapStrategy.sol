@@ -14,7 +14,7 @@ import "../../external/sushi/IMiniChef.sol";
 import "../../external/sushi/IComplexRewarderTime.sol";
 import "../../utils/actions/UniswapV2LiquidityActionsMixin.sol";
 
-abstract contract SushiPairBaseStrategy is BaseClaimableStrategy, UniswapV2LiquidityActionsMixin {
+contract SushiSwapStrategy is BaseClaimableStrategy, UniswapV2LiquidityActionsMixin {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     // UniswapV2Router02
@@ -31,18 +31,19 @@ abstract contract SushiPairBaseStrategy is BaseClaimableStrategy, UniswapV2Liqui
     uint256 public poolId;
     address public pair;
 
-    function _initialize(
+    function initialize(
         address _vault,
         address _harvester,
-        uint256 _poolId,
-        address _pair
-    ) internal {
+        string memory _name,
+        address _pair,
+        uint256 _poolId
+    ) external initializer {
         address[] memory _wants = new address[](2);
         _wants[0] = IUniswapV2Pair(_pair).token0();
         _wants[1] = IUniswapV2Pair(_pair).token1();
-        super._initialize(_vault, _harvester, uint16(ProtocolEnum.Sushi), _wants);
-        poolId = _poolId;
+        super._initialize(_vault, _harvester, _name, uint16(ProtocolEnum.Sushi), _wants);
         pair = _pair;
+        poolId = _poolId;
         _initializeUniswapV2(ROUTER);
     }
 
@@ -61,17 +62,11 @@ abstract contract SushiPairBaseStrategy is BaseClaimableStrategy, UniswapV2Liqui
         (_ratios[0], _ratios[1], ) = IUniswapV2Pair(pair).getReserves();
     }
 
-    function getOutputsInfo()
-        external
-        view
-        virtual
-        override
-        returns (OutputInfo[] memory outputsInfo)
-    {
+    function getOutputsInfo() external view virtual override returns (OutputInfo[] memory outputsInfo) {
         outputsInfo = new OutputInfo[](1);
         OutputInfo memory info0 = outputsInfo[0];
         info0.outputCode = 0;
-        info0.outputTokens = wants;   
+        info0.outputTokens = wants;
     }
 
     function getPositionDetail()
@@ -137,10 +132,7 @@ abstract contract SushiPairBaseStrategy is BaseClaimableStrategy, UniswapV2Liqui
         _claimAmounts[1] = balanceOfToken(REWARD);
     }
 
-    function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
-        internal
-        override
-    {
+    function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts) internal override {
         // should not deposit if one token is smaller than 1
         if (balanceOfToken(wants[0]) < 1 || balanceOfToken(wants[1]) < 1) {
             return;
@@ -162,7 +154,11 @@ abstract contract SushiPairBaseStrategy is BaseClaimableStrategy, UniswapV2Liqui
         console.log("stakingPool.deposit(pid, liquidity) ok:");
     }
 
-    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares,uint256 _outputCode) internal override {
+    function withdrawFrom3rdPool(
+        uint256 _withdrawShares,
+        uint256 _totalShares,
+        uint256 _outputCode
+    ) internal override {
         uint256 _lpAmount = (balanceOfLpToken() * _withdrawShares) / _totalShares;
         if (_lpAmount > 0) {
             IMiniChef(POOL).withdraw(poolId, _lpAmount, address(this));
@@ -170,5 +166,4 @@ abstract contract SushiPairBaseStrategy is BaseClaimableStrategy, UniswapV2Liqui
             __uniswapV2Redeem(address(this), pair, _lpAmount, wants[0], wants[1], 0, 0);
         }
     }
-
 }

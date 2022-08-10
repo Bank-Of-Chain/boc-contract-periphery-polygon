@@ -28,17 +28,17 @@ contract Curve3CrvStrategy is Initializable, BaseClaimableStrategy {
 
     address[] internal rewardTokens;
 
-    function name() public pure override returns (string memory) {
-        return "Curve3CrvStrategy";
-    }
-
-    function initialize(address _vault, address _harvester) public initializer {
+    function initialize(
+        address _vault,
+        address _harvester,
+        string memory _name
+    ) external initializer {
         address[] memory _wants = new address[](3);
         _wants[0] = DAI_TOKEN;
         _wants[1] = USDC_TOKEN;
         _wants[2] = USDT_TOKEN;
 
-        super._initialize(_vault, _harvester, uint16(ProtocolEnum.Curve), _wants);
+        super._initialize(_vault, _harvester, _name, uint16(ProtocolEnum.Curve), _wants);
 
         rewardTokens = new address[](2);
         // wmatic
@@ -185,19 +185,14 @@ contract Curve3CrvStrategy is Initializable, BaseClaimableStrategy {
             ICurveStableSwap3Crv(LP_TOKEN_POOL).remove_liquidity(_lpAmount, minAmounts, true);
         } else {
             int128 index;
-            if (_outputCode == 1){
+            if (_outputCode == 1) {
                 index = 0;
-            } else if (_outputCode == 2){
+            } else if (_outputCode == 2) {
                 index = 1;
-            } else if (_outputCode == 3){
+            } else if (_outputCode == 3) {
                 index = 2;
-            } 
-            ICurveStableSwap3Crv(LP_TOKEN_POOL).remove_liquidity_one_coin(
-                _lpAmount,
-                index,
-                0,
-                true
-            );
+            }
+            ICurveStableSwap3Crv(LP_TOKEN_POOL).remove_liquidity_one_coin(_lpAmount, index, 0, true);
         }
     }
 }

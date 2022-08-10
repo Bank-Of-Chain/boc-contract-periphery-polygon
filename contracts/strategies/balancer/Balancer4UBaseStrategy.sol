@@ -14,7 +14,7 @@ import "../../external/balancer/IBalancerVault.sol";
 import "../../external/balancer/IBalancerHelper.sol";
 import "../../external/balancer/IStakingLiquidityGauge.sol";
 
-abstract contract BalancerFreeInSingleOutStrategy is BaseClaimableStrategy {
+abstract contract Balancer4UBaseStrategy is BaseClaimableStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     enum JoinKind {
@@ -48,6 +48,7 @@ abstract contract BalancerFreeInSingleOutStrategy is BaseClaimableStrategy {
     function initialize(
         address _vault,
         address _harvester,
+        string memory _name,
         address[] memory _wants,
         address _exitToken,
         bytes32 _poolId,
@@ -60,7 +61,7 @@ abstract contract BalancerFreeInSingleOutStrategy is BaseClaimableStrategy {
         poolLpToken = _poolLpToken;
         extraRewardTokens = _extraRewardTokens;
 
-        super._initialize(_vault, _harvester, uint16(ProtocolEnum.Balancer), _wants);
+        super._initialize(_vault, _harvester, _name, uint16(ProtocolEnum.Balancer), _wants);
 
         (address[] memory tokens, , ) = BALANCER_VAULT.getPoolTokens(_poolId);
         poolAssets = new IAsset[](tokens.length);
@@ -125,7 +126,7 @@ abstract contract BalancerFreeInSingleOutStrategy is BaseClaimableStrategy {
     {
         (, _amounts, ) = BALANCER_VAULT.getPoolTokens(poolId);
         _tokens = wants;
-        
+
         uint256 lpBalance = IERC20Upgradeable(getPoolGauge()).balanceOf(address(this));
         uint256 lpTotalSupply = IERC20Upgradeable(poolLpToken).totalSupply();
         for (uint256 i = 0; i < _tokens.length; i++) {
@@ -200,7 +201,7 @@ abstract contract BalancerFreeInSingleOutStrategy is BaseClaimableStrategy {
         address payable recipient = payable(address(this));
         uint256[] memory minAmountsOut = new uint256[](poolAssets.length);
         IBalancerVault.ExitPoolRequest memory exitRequest;
-        if (_outputCode == 0){
+        if (_outputCode == 0) {
             exitRequest = IBalancerVault.ExitPoolRequest({
                 assets: poolAssets,
                 minAmountsOut: minAmountsOut,
