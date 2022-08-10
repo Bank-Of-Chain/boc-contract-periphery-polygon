@@ -13,7 +13,7 @@ import "./../../utils/actions/UniswapV2LiquidityActionsMixin.sol";
 import "./../../external/uniswap/IUniswapV2Pair.sol";
 import "./../../external/quickswap/IStakingRewards.sol";
 
-abstract contract QuickswapBaseStrategy is BaseClaimableStrategy, UniswapV2LiquidityActionsMixin {
+contract QuickswapStrategy is BaseClaimableStrategy, UniswapV2LiquidityActionsMixin {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     address public constant routerAddress = address(0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff);
@@ -27,12 +27,13 @@ abstract contract QuickswapBaseStrategy is BaseClaimableStrategy, UniswapV2Liqui
 
     IStakingRewards internal stakingRewards;
 
-    function _initialize(
+    function initialize(
         address _vault,
         address _harvester,
+        string memory _name,
         address _uniswapV2Pair,
         address _stakingPool
-    ) internal {
+    ) external initializer {
         uniswapV2Pair = IUniswapV2Pair(_uniswapV2Pair);
         stakingRewards = IStakingRewards(_stakingPool);
         pairToken0 = uniswapV2Pair.token0();
@@ -40,7 +41,7 @@ abstract contract QuickswapBaseStrategy is BaseClaimableStrategy, UniswapV2Liqui
         address[] memory _wants = new address[](2);
         _wants[0] = pairToken0;
         _wants[1] = pairToken1;
-        super._initialize(_vault, _harvester, uint16(ProtocolEnum.Quickswap), _wants);
+        super._initialize(_vault, _harvester, _name, uint16(ProtocolEnum.Quickswap), _wants);
         _initializeUniswapV2(routerAddress);
     }
 
@@ -61,13 +62,7 @@ abstract contract QuickswapBaseStrategy is BaseClaimableStrategy, UniswapV2Liqui
         _ratios[1] = reserve1;
     }
 
-    function getOutputsInfo()
-        external
-        view
-        virtual
-        override
-        returns (OutputInfo[] memory outputsInfo)
-    {
+    function getOutputsInfo() external view virtual override returns (OutputInfo[] memory outputsInfo) {
         outputsInfo = new OutputInfo[](1);
         OutputInfo memory info0 = outputsInfo[0];
         info0.outputCode = 0;
@@ -132,10 +127,7 @@ abstract contract QuickswapBaseStrategy is BaseClaimableStrategy, UniswapV2Liqui
         _claimAmounts[0] = balanceOfToken(rewardsToken);
     }
 
-    function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
-        internal
-        override
-    {
+    function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts) internal override {
         uint256 liquidity = __uniswapV2Lend(
             address(this),
             _assets[0],
@@ -148,16 +140,17 @@ abstract contract QuickswapBaseStrategy is BaseClaimableStrategy, UniswapV2Liqui
 
         if (liquidity > 0) {
             IERC20Upgradeable(address(uniswapV2Pair)).safeApprove(address(stakingRewards), 0);
-            IERC20Upgradeable(address(uniswapV2Pair)).safeApprove(
-                address(stakingRewards),
-                liquidity
-            );
+            IERC20Upgradeable(address(uniswapV2Pair)).safeApprove(address(stakingRewards), liquidity);
             stakingRewards.stake(liquidity);
             console.log("_deposit2:%d", liquidity);
         }
     }
 
-    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares,uint256 _outputCode) internal override {
+    function withdrawFrom3rdPool(
+        uint256 _withdrawShares,
+        uint256 _totalShares,
+        uint256 _outputCode
+    ) internal override {
         uint256 _lpAmount = (balanceOfLpToken() * _withdrawShares) / _totalShares;
         if (_lpAmount > 0) {
             stakingRewards.withdraw(_lpAmount);
@@ -172,5 +165,4 @@ abstract contract QuickswapBaseStrategy is BaseClaimableStrategy, UniswapV2Liqui
             );
         }
     }
-
 }

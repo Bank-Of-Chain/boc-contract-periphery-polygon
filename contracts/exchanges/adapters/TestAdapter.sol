@@ -25,7 +25,7 @@ contract TestAdapter is IExchangeAdapter {
         uint8 _method,
         bytes calldata _encodedCallArgs,
         IExchangeAdapter.SwapDescription calldata _sd
-    ) external override returns (uint256) {
+    ) external override payable returns (uint256) {
 //        console.log(
 //            "[TestAdapter] swap:_sd.srcToken:%s, balanceOf:%s",
 //            _sd.srcToken,

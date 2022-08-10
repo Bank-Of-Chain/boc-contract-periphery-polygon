@@ -34,7 +34,7 @@ contract OneInchAdapter is IExchangeAdapter, ExchangeHelpers {
         uint8,
         bytes calldata _data,
         SwapDescription calldata _sd
-    ) external override returns (uint256) {
+    ) external override payable returns (uint256) {
         // 0x7c是1inch swap方法名的编码
         if (_data[0] == 0x7c) {
             return swap(_data, _sd);

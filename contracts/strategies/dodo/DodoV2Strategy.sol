@@ -13,21 +13,31 @@ import "../../external/dodo/DodoVaultV1.sol";
 import "../../external/dodo/DodoStakePoolV2.sol";
 import "../../utils/actions/DodoPoolV2ActionsMixin.sol";
 
-abstract contract DodoBaseV2Strategy is BaseClaimableStrategy, DodoPoolV2ActionsMixin {
+contract DodoV2Strategy is BaseClaimableStrategy, DodoPoolV2ActionsMixin {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    function getLpTokenPool() internal pure virtual returns (address);
+    address public lpTokenPool;
+    address public baseLpToken;
+    address public quoteLpToken;
 
-    function getBaseLpToken() internal pure virtual returns (address);
-
-    function getQuoteLpToken() internal pure virtual returns (address);
-
-    function _initialize(address _vault, address _harvester) internal {
+    function initialize(
+        address _vault,
+        address _harvester,
+        string memory _name,
+        address _lpTokenPool,
+        address _baseLpToken,
+        address _quoteLpToken,
+        address _baseStakePool,
+        address _quoteStakePool
+    ) external initializer{
+        lpTokenPool = _lpTokenPool;
+        baseLpToken = _baseLpToken;
+        quoteLpToken = _quoteLpToken;
         address[] memory _wants = new address[](2);
-        address _lpTokenPool = getLpTokenPool();
         _wants[0] = DodoVaultV1(_lpTokenPool)._BASE_TOKEN_();
         _wants[1] = DodoVaultV1(_lpTokenPool)._QUOTE_TOKEN_();
-        super._initialize(_vault, _harvester, uint16(ProtocolEnum.Dodo), _wants);
+        super.__initStakePool(_baseStakePool,_quoteStakePool);
+        super._initialize(_vault, _harvester, _name, uint16(ProtocolEnum.Dodo), _wants);
     }
 
     function getVersion() external pure override returns (string memory) {
@@ -41,7 +51,7 @@ abstract contract DodoBaseV2Strategy is BaseClaimableStrategy, DodoPoolV2Actions
         returns (address[] memory _assets, uint256[] memory _ratios)
     {
         _assets = wants;
-        (uint256 baseExpectedTarget, uint256 quoteExpectedTarget) = DodoVaultV1(getLpTokenPool())
+        (uint256 baseExpectedTarget, uint256 quoteExpectedTarget) = DodoVaultV1(lpTokenPool)
             .getExpectedTarget();
         _ratios = new uint256[](_assets.length);
         _ratios[0] = baseExpectedTarget;
@@ -68,7 +78,7 @@ abstract contract DodoBaseV2Strategy is BaseClaimableStrategy, DodoPoolV2Actions
     {
         _tokens = wants;
         _amounts = valueOfLpTokens();
-        address _lpTokenPool = getLpTokenPool();
+        address _lpTokenPool = lpTokenPool;
         uint256 basePenalty = DodoVaultV1(_lpTokenPool).getWithdrawBasePenalty(_amounts[0]);
         uint256 quotePenalty = DodoVaultV1(_lpTokenPool).getWithdrawQuotePenalty(_amounts[1]);
         _amounts[0] -= basePenalty;
@@ -87,7 +97,7 @@ abstract contract DodoBaseV2Strategy is BaseClaimableStrategy, DodoPoolV2Actions
     function valueOfLpTokens() private view returns (uint256[] memory) {
         uint256[] memory lpTokenAmounts = balanceOfLpTokens();
         uint256[] memory amounts = new uint256[](2);
-        address _lpTokenPool = getLpTokenPool();
+        address _lpTokenPool = lpTokenPool;
         amounts[0] =
             (lpTokenAmounts[0] * DodoVaultV1(_lpTokenPool)._TARGET_BASE_TOKEN_AMOUNT_()) /
             DodoVaultV1(_lpTokenPool).getTotalBaseCapital();
@@ -99,7 +109,7 @@ abstract contract DodoBaseV2Strategy is BaseClaimableStrategy, DodoPoolV2Actions
 
     function get3rdPoolAssets() external view override returns (uint256) {
         address[] memory _wants = wants;
-        address _lpTokenPool = getLpTokenPool();
+        address _lpTokenPool = lpTokenPool;
         uint256 targetPoolTotalAssets;
 
         uint256 baseTokenAmount = DodoVaultV1(_lpTokenPool)._TARGET_BASE_TOKEN_AMOUNT_();
@@ -134,8 +144,8 @@ abstract contract DodoBaseV2Strategy is BaseClaimableStrategy, DodoPoolV2Actions
         returns (address[] memory _rewardTokens, uint256[] memory _claimAmounts)
     {
         (_rewardTokens, _claimAmounts) = getPendingRewards();
-        address _baseStakePool = getBaseStakePoolAddress();
-        address _quoteStakePool = getQuoteStakePoolAddress();
+        address _baseStakePool = baseStakePool;
+        address _quoteStakePool = quoteStakePool;
         if (_claimAmounts[0] > 0) {
             __claimRewards(_baseStakePool, 0);
             __claimRewards(_quoteStakePool, 0);
@@ -151,7 +161,7 @@ abstract contract DodoBaseV2Strategy is BaseClaimableStrategy, DodoPoolV2Actions
             _assets.length == wants.length && _assets[0] == wants[0] && _assets[1] == wants[1],
             "need two token."
         );
-        uint8 rStatus = DodoVaultV1(getLpTokenPool())._R_STATUS_();
+        uint8 rStatus = DodoVaultV1(lpTokenPool)._R_STATUS_();
         // Deposit fewer coins first, so that you will get rewards
         if (rStatus == 2) {
             _depositQuoteToken(_assets[1], _amounts[1]);
@@ -164,13 +174,13 @@ abstract contract DodoBaseV2Strategy is BaseClaimableStrategy, DodoPoolV2Actions
 
     function _depositBaseToken(address _asset, uint256 _amount) internal {
         if (_amount > 0) {
-            address _lpTokenPool = getLpTokenPool();
+            address _lpTokenPool = lpTokenPool;
             IERC20Upgradeable(_asset).safeApprove(_lpTokenPool, 0);
             IERC20Upgradeable(_asset).safeApprove(_lpTokenPool, _amount);
             DodoVaultV1(_lpTokenPool).depositBase(_amount);
-            address _baseLpToken = getBaseLpToken();
+            address _baseLpToken = baseLpToken;
             uint256 baseLiquidity = balanceOfToken(_baseLpToken);
-            address _baseStakePool = getBaseStakePoolAddress();
+            address _baseStakePool = baseStakePool;
             IERC20Upgradeable(_baseLpToken).safeApprove(_baseStakePool, 0);
             IERC20Upgradeable(_baseLpToken).safeApprove(_baseStakePool, baseLiquidity);
             DodoStakePoolV2(_baseStakePool).deposit(baseLiquidity);
@@ -179,13 +189,13 @@ abstract contract DodoBaseV2Strategy is BaseClaimableStrategy, DodoPoolV2Actions
 
     function _depositQuoteToken(address _asset, uint256 _amount) internal {
         if (_amount > 0) {
-            address _lpTokenPool = getLpTokenPool();
+            address _lpTokenPool = lpTokenPool;
             IERC20Upgradeable(_asset).safeApprove(_lpTokenPool, 0);
             IERC20Upgradeable(_asset).safeApprove(_lpTokenPool, _amount);
             DodoVaultV1(_lpTokenPool).depositQuote(_amount);
-            address _quoteLpToken = getQuoteLpToken();
+            address _quoteLpToken = quoteLpToken;
             uint256 quoteLiquidity = balanceOfToken(_quoteLpToken);
-            address _quoteStakePool = getQuoteStakePoolAddress();
+            address _quoteStakePool = quoteStakePool;
             IERC20Upgradeable(_quoteLpToken).safeApprove(_quoteStakePool, 0);
             IERC20Upgradeable(_quoteLpToken).safeApprove(_quoteStakePool, quoteLiquidity);
             DodoStakePoolV2(_quoteStakePool).deposit(quoteLiquidity);
@@ -197,7 +207,7 @@ abstract contract DodoBaseV2Strategy is BaseClaimableStrategy, DodoPoolV2Actions
         uint256 _totalShares,
         uint256 _outputCode
     ) internal override {
-        address _lpTokenPool = getLpTokenPool();
+        address _lpTokenPool = lpTokenPool;
         uint256 _baseWithdrawAmount = (balanceOfBaseLpToken() * _withdrawShares) / _totalShares;
         uint256 _quoteWithdrawAmount = (balanceOfQuoteLpToken() * _withdrawShares) / _totalShares;
         (uint256 baseExpectedTarget, uint256 quoteExpectedTarget) = DodoVaultV1(_lpTokenPool)
@@ -205,8 +215,8 @@ abstract contract DodoBaseV2Strategy is BaseClaimableStrategy, DodoPoolV2Actions
         uint256 totalBaseCapital = DodoVaultV1(_lpTokenPool).getTotalBaseCapital();
         uint256 totalQuoteCapital = DodoVaultV1(_lpTokenPool).getTotalQuoteCapital();
         uint8 rStatus = DodoVaultV1(_lpTokenPool)._R_STATUS_();
-        address _baseStakePool = getBaseStakePoolAddress();
-        address _quoteStakePool = getQuoteStakePoolAddress();
+        address _baseStakePool = baseStakePool;
+        address _quoteStakePool = quoteStakePool;
 
         if (rStatus == 2) {
             if (_baseWithdrawAmount > 0) {

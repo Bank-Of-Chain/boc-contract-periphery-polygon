@@ -27,24 +27,24 @@ contract Synapse4UStrategy is BaseClaimableStrategy {
     IMetaSwap internal constant swapPool = IMetaSwap(0x85fCD7Dd0a1e1A9FCD5FD886ED522dE8221C3EE5);
     IMiniChefV2 internal constant miniChef = IMiniChefV2(0x7875Af1a6878bdA1C129a4e2356A3fD040418Be5);
 
-    function initialize(address _vault, address _harvester) public initializer {
+    function initialize(
+        address _vault,
+        address _harvester,
+        string memory _name
+    ) public initializer {
         // 3rdPool support 4 assets,but only use 3.
         address[] memory _wants = new address[](3);
         _wants[0] = 0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063;
         _wants[1] = 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174;
         _wants[2] = 0xc2132D05D31c914a87C6611C10748AEb04B58e8F;
 
-        super._initialize(_vault, _harvester, uint16(ProtocolEnum.Synapse), _wants);
+        super._initialize(_vault, _harvester, _name, uint16(ProtocolEnum.Synapse), _wants);
 
         isWantRatioIgnorable = true;
     }
 
     function getVersion() external pure virtual override returns (string memory) {
         return "1.0.1";
-    }
-
-    function name() external pure virtual override returns (string memory) {
-        return "Synapse4UStrategy";
     }
 
     function getWantsInfo()

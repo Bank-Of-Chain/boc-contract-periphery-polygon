@@ -42,7 +42,7 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
         uint8 _method,
         bytes calldata _encodedCallArgs,
         SwapDescription calldata _sd
-    ) external override returns (uint256) {
+    ) external override payable returns (uint256) {
         require(_method < SWAP_METHOD_SELECTOR.length, "ParaswapAdapter method out of range");
         console.log("---paraswap swap method", _method);
         bytes4 selector = SWAP_METHOD_SELECTOR[_method];

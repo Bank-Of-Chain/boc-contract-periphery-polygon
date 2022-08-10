@@ -4,7 +4,7 @@ const { assert } = require('chai');
 
 const MFC = require('../../config/mainnet-fork-test-config');
 const addressConfig = require('../../config/address-config');
-
+const {strategiesList} = require('../../config/strategy/strategy-config');
 const topUp = require('../../utils/top-up-utils');
 const { advanceBlock, getLatestBlock } = require('../../utils/block-utils');
 
@@ -105,6 +105,15 @@ async function _topUpFamilyBucket() {
     console.log('topUp finish!');
 }
 
+function findStrategyItem(strategyName) {
+
+    const result = strategiesList.find((item) => {
+        return item.name == strategyName;
+    });
+
+    return result;
+}
+
 async function check(strategyName, callback, exchangeRewardTokenCallback, uniswapV3RebalanceCallback,outputCode = 0) {
     before(async function () {
         accounts = await ethers.getSigners();
@@ -124,10 +133,25 @@ async function check(strategyName, callback, exchangeRewardTokenCallback, uniswa
         console.log('mock vault address:%s', mockVault.address);
         // init mockUniswapV3Router
         mockUniswapV3Router = await MockUniswapV3Router.new();
+        const strategyItem = findStrategyItem(strategyName);
+        console.log('strategyItem:',strategyItem);
+        
+        const {
+            name,
+            contract,
+            customParams
+        } = strategyItem;
         // init strategy
-        const Strategy = hre.artifacts.require(strategyName);
+        const Strategy = hre.artifacts.require(contract);
         strategy = await Strategy.new();
-        await strategy.initialize(mockVault.address, harvester);
+        const allParams = [
+            mockVault.address,
+            harvester,
+            name,
+            ...customParams
+        ]
+        console.log('allParams:',allParams);
+        await strategy.initialize(...allParams);
         // top up for vault
         await _topUpFamilyBucket();
     });

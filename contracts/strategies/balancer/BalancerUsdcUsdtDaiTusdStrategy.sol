@@ -2,15 +2,19 @@
 
 pragma solidity ^0.8.0;
 
-import "./BalancerFreeInSingleOutStrategy.sol";
+import "./Balancer4UBaseStrategy.sol";
 
-contract BalancerUsdcUsdtDaiTusdStrategy is BalancerFreeInSingleOutStrategy {
+contract BalancerUsdcUsdtDaiTusdStrategy is Balancer4UBaseStrategy {
     bytes32 constant POOL_ID = 0x0d34e5dd4d8f043557145598e4e2dc286b35fd4f000000000000000000000068;
     address constant USDT = address(0xc2132D05D31c914a87C6611C10748AEb04B58e8F);
     address constant TUSD = address(0x2e1AD108fF1D8C782fcBbB89AAd783aC49586756);
     address constant POOL_LP_TOKEN = 0x0d34e5dD4D8f043557145598E4e2dC286B35FD4f;
 
-    function initialize(address _vault, address _harvester) public initializer {
+    function initialize(
+        address _vault,
+        address _harvester,
+        string memory _name
+    ) public initializer {
         address[] memory _extraRewardTokens = new address[](1);
         _extraRewardTokens[0] = TUSD;
         address[] memory _wants = new address[](4);
@@ -21,6 +25,7 @@ contract BalancerUsdcUsdtDaiTusdStrategy is BalancerFreeInSingleOutStrategy {
         super.initialize(
             _vault,
             _harvester,
+            _name,
             _wants,
             USDT,
             POOL_ID,
@@ -29,15 +34,11 @@ contract BalancerUsdcUsdtDaiTusdStrategy is BalancerFreeInSingleOutStrategy {
         );
     }
 
-    function getPoolGauge() override public pure returns (address){
+    function getPoolGauge() public pure override returns (address) {
         return 0x6B0068a4408F2aDB633CeB90E6dF6De28ba73696;
     }
 
     function getVersion() external pure override returns (string memory) {
         return "1.0.1";
-    }
-
-    function name() external pure override returns (string memory) {
-        return "BalancerUsdcUsdtDaiTusdStrategy";
     }
 }

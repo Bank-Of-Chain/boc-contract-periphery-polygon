@@ -26,7 +26,7 @@ contract OneInchV4Adapter is IExchangeAdapter {
         uint8,
         bytes calldata _data,
         SwapDescription calldata _sd
-    ) external override returns (uint256) {
+    ) external override payable returns (uint256) {
         console.log("[OneInchV4Adapter] start safeApprove");
         IERC20(_sd.srcToken).safeApprove(AGGREGATION_ROUTER_V4, 0);
         IERC20(_sd.srcToken).safeApprove(AGGREGATION_ROUTER_V4, _sd.amount);
