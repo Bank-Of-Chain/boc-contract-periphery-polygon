@@ -64,6 +64,7 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
 
     function multiSwap(bytes calldata _encodedCallArgs, SwapDescription calldata _sd)
         public
+        payable
         returns (uint256)
     {
         Utils.SellData memory data = abi.decode(_encodedCallArgs, (Utils.SellData));
@@ -86,6 +87,7 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
 
     function megaSwap(bytes calldata _encodedCallArgs, SwapDescription calldata _sd)
         public
+        payable
         returns (uint256)
     {
         Utils.MegaSwapSellData memory data = abi.decode(
@@ -113,6 +115,7 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
 
     function protectedMultiSwap(bytes calldata _encodedCallArgs, SwapDescription calldata _sd)
         public
+        payable
         returns (uint256)
     {
         Utils.SellData memory data = abi.decode(_encodedCallArgs, (Utils.SellData));
@@ -134,6 +137,7 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
 
     function protectedMegaSwap(bytes calldata _encodedCallArgs, SwapDescription calldata _sd)
         public
+        payable
         returns (uint256)
     {
         Utils.MegaSwapSellData memory data = abi.decode(
@@ -161,6 +165,7 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
 
     function protectedSimpleSwap(bytes calldata _encodedCallArgs, SwapDescription calldata _sd)
         public
+        payable
         returns (uint256)
     {
         Utils.SimpleData memory data = abi.decode(_encodedCallArgs, (Utils.SimpleData));
@@ -182,6 +187,7 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
 
     function simpleSwap(bytes calldata _encodedCallArgs, SwapDescription calldata _sd)
         public
+        payable
         returns (uint256)
     {
         Utils.SimpleData memory data = abi.decode(_encodedCallArgs, (Utils.SimpleData));
@@ -203,6 +209,7 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
 
     function swapOnUniswap(bytes calldata _encodedCallArgs, SwapDescription calldata _sd)
         public
+        payable
         returns (uint256)
     {
         (
@@ -232,6 +239,7 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
 
     function swapOnUniswapFork(bytes calldata _encodedCallArgs, SwapDescription calldata _sd)
         public
+        payable
         returns (uint256)
     {
         (
@@ -262,6 +270,7 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
 
     function swapOnUniswapV2Fork(bytes calldata _encodedCallArgs, SwapDescription calldata _sd)
         public
+        payable
         returns (uint256)
     {
         (
@@ -330,6 +339,7 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
 
     function swapOnZeroXv2(bytes calldata _encodedCallArgs, SwapDescription calldata _sd)
         public
+        payable
         returns (uint256)
     {
         (
@@ -381,6 +391,7 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
 
     function swapOnZeroXv4(bytes calldata _encodedCallArgs, SwapDescription calldata _sd)
         public
+        payable
         returns (uint256)
     {
         (
