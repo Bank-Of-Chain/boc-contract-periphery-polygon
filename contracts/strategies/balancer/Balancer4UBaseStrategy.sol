@@ -201,18 +201,18 @@ abstract contract Balancer4UBaseStrategy is BaseClaimableStrategy {
         address payable recipient = payable(address(this));
         uint256[] memory minAmountsOut = new uint256[](poolAssets.length);
         IBalancerVault.ExitPoolRequest memory exitRequest;
-        if (_outputCode == 0) {
+        if (_outputCode > 0 && _outputCode < 5) {
             exitRequest = IBalancerVault.ExitPoolRequest({
                 assets: poolAssets,
                 minAmountsOut: minAmountsOut,
-                userData: abi.encode(ExitKind.EXACT_BPT_IN_FOR_TOKENS_OUT, _lpAmount),
+                userData: abi.encode(ExitKind.EXACT_BPT_IN_FOR_ONE_TOKEN_OUT, _lpAmount, _outputCode - 1),
                 toInternalBalance: false
             });
         } else {
             exitRequest = IBalancerVault.ExitPoolRequest({
                 assets: poolAssets,
                 minAmountsOut: minAmountsOut,
-                userData: abi.encode(ExitKind.EXACT_BPT_IN_FOR_ONE_TOKEN_OUT, _lpAmount, _outputCode - 1),
+                userData: abi.encode(ExitKind.EXACT_BPT_IN_FOR_TOKENS_OUT, _lpAmount),
                 toInternalBalance: false
             });
         }

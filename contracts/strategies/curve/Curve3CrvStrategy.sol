@@ -179,11 +179,7 @@ contract Curve3CrvStrategy is Initializable, BaseClaimableStrategy {
         uint256 _lpAmount = (balanceOfLpToken() * _withdrawShares) / _totalShares;
 
         ICurveGauge(gauge).withdraw(_lpAmount);
-        if (_outputCode == 0) {
-            // withdraw multi coins
-            uint256[3] memory minAmounts;
-            ICurveStableSwap3Crv(LP_TOKEN_POOL).remove_liquidity(_lpAmount, minAmounts, true);
-        } else {
+        if (_outputCode > 0 && _outputCode < 4) {
             int128 index;
             if (_outputCode == 1) {
                 index = 0;
@@ -193,6 +189,10 @@ contract Curve3CrvStrategy is Initializable, BaseClaimableStrategy {
                 index = 2;
             }
             ICurveStableSwap3Crv(LP_TOKEN_POOL).remove_liquidity_one_coin(_lpAmount, index, 0, true);
+        } else {
+            // withdraw multi coins
+            uint256[3] memory minAmounts;
+            ICurveStableSwap3Crv(LP_TOKEN_POOL).remove_liquidity(_lpAmount, minAmounts, true);
         }
     }
 }
