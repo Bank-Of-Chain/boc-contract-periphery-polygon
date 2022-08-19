@@ -14,7 +14,7 @@ abstract contract UniswapV3LiquidityActionsMixin is AssetHelpers {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     event UniV3Initialized(address token0, address token1, uint24 fee);
-    event UniV3NFTPositionAdded(uint256 indexed tokenId);
+    event UniV3NFTPositionAdded(uint256 indexed tokenId, uint128 liquidity, uint256 amount0, uint256 amount1);
     event UniV3NFTPositionRemoved(uint256 indexed tokenId);
     event UniV3NFTCollect(uint256 nftId, uint256 amount0, uint256 amount1);
 
@@ -93,8 +93,7 @@ abstract contract UniswapV3LiquidityActionsMixin is AssetHelpers {
         uint256 amount1
     ){
         (tokenId, liquidity, amount0, amount1) = nonfungiblePositionManager.mint(_params);
-        nftIds.push(tokenId);
-        emit UniV3NFTPositionAdded(tokenId);
+        emit UniV3NFTPositionAdded(tokenId, liquidity, amount0, amount1);
     }
 
     /// @dev Purges a position by removing all liquidity,
@@ -134,18 +133,6 @@ abstract contract UniswapV3LiquidityActionsMixin is AssetHelpers {
         // Reverts if liquidity or uncollected tokens are remaining
         nonfungiblePositionManager.burn(_nftId);
 
-        // Can later replace with the helper from AddressArrayLib.sol, updated for solc 7
-        uint256 nftCount = nftIds.length;
-        for (uint256 i; i < nftCount; i++) {
-            if (nftIds[i] == _nftId) {
-                if (i < nftCount - 1) {
-                    nftIds[i] = nftIds[nftCount - 1];
-                }
-                nftIds.pop();
-                break;
-            }
-        }
-
         emit UniV3NFTPositionRemoved(_nftId);
     }
 
@@ -155,43 +142,10 @@ abstract contract UniswapV3LiquidityActionsMixin is AssetHelpers {
     returns (uint256, uint256)
     {
         (uint256 amount0, uint256 amount1) = nonfungiblePositionManager.decreaseLiquidity(_params);
-        console.log('__removeLiquidity,amount0:%d,amount1:%d',amount0,amount1);
         if (amount0 > 0 || amount1 > 0) {
-            (amount0,amount1) = __collect(_params.tokenId, uint128(amount0), uint128(amount1));
-            console.log('__collect,amount0:%d,amount1:%d',amount0,amount1);
+            (amount0, amount1) = __collect(_params.tokenId, uint128(amount0), uint128(amount1));
         }
-        return (amount0,amount1);
-    }
-
-    /// @notice Retrieves the managed assets (positive value) of the external position
-    /// @return assets_ Managed assets
-    /// @return amounts_ Managed asset amounts
-    function getManagedAssets()
-    external view
-    returns (address[] memory assets_, uint256[] memory amounts_)
-    {
-        uint256[] memory nftIdsCopy = getNftIds();
-        if (nftIdsCopy.length == 0) {
-            return (assets_, amounts_);
-        }
-
-        assets_ = new address[](2);
-        assets_[0] = token0;
-        assets_[1] = token1;
-
-        amounts_ = new uint256[](2);
-        for (uint256 i; i < nftIdsCopy.length; i++) {
-            uint160 sqrtPriceX96 = __getSqrtPriceX96(nftIdsCopy[i]);
-            (uint256 amount0, uint256 amount1) = __getPositionTotal(
-                nftIdsCopy[i],
-                sqrtPriceX96
-            );
-
-            amounts_[0] = amounts_[0] + amount0;
-            amounts_[1] = amounts_[1] + amount1;
-        }
-
-        return (assets_, amounts_);
+        return (amount0, amount1);
     }
 
     function __getPositionTotal(uint256 _nftId, uint160 _sqrtPriceX96) internal view returns (uint256, uint256){
@@ -204,14 +158,6 @@ abstract contract UniswapV3LiquidityActionsMixin is AssetHelpers {
 
     function __getSqrtPriceX96(uint256 _nftId) internal view returns (uint160 sqrtPriceX96){
         (sqrtPriceX96,,,,,,) = pool.slot0();
-    }
-
-    // PUBLIC FUNCTIONS
-
-    /// @notice Gets the `nftIds` variable
-    /// @return nftIds_ The `nftIds` variable value
-    function getNftIds() public view returns (uint256[] memory nftIds_) {
-        return nftIds;
     }
 
     /// @notice Gets the `NON_FUNGIBLE_TOKEN_MANAGER` variable
