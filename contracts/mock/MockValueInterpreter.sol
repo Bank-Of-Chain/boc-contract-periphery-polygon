@@ -54,7 +54,7 @@ contract MockValueInterpreter is IValueInterpreter, AccessControlMixin {
         address _quoteAsset
     ) external view override returns (uint256 _value) {
         for (uint256 i = 0; i < _baseAssets.length; i++) {
-            (uint256 _assetValue, bool _assetValueIsValid) = __calcAssetValue(
+            (uint256 _assetValue, ) = __calcAssetValue(
                 _baseAssets[i],
                 _amounts[i],
                 _quoteAsset

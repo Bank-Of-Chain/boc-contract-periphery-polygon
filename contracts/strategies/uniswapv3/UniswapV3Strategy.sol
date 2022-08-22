@@ -285,19 +285,12 @@ contract UniswapV3Strategy is BaseClaimableStrategy, UniswapV3LiquidityActionsMi
         );
         uint256 _balance0 = balanceOfToken(token0);
         uint256 _balance1 = balanceOfToken(token1);
-        (uint256 _tokenId, uint128 _liquidity, uint256 _amount0, uint256 _amount1) = mintNewPosition(
-            _tickLower,
-            _tickUpper,
-            _balance0,
-            _balance1,
-            true
-        );
+
+        mintNewPosition(_tickLower, _tickUpper, _balance0, _balance1, true);
 
         _balance0 = balanceOfToken(token0);
         _balance1 = balanceOfToken(token1);
         if (_balance0 > 0 || _balance1 > 0) {
-            int24 _bidLower = _tickFloor - limitThreshold;
-            int24 _askUpper = _tickCeil + limitThreshold;
             // Place bid or ask order on Uniswap depending on which token is left
             if (
                 getLiquidityForAmounts(_tickFloor - limitThreshold, _tickFloor, _balance0, _balance1) >

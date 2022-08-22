@@ -17,7 +17,7 @@ contract TestAdapter is IExchangeAdapter {
         valueInterpreter = _valueInterpreter;
     }
 
-    function identifier() external pure override returns (string memory identifier_) {
+    function identifier() external pure override returns (string memory) {
         return "testAdapter";
     }
 

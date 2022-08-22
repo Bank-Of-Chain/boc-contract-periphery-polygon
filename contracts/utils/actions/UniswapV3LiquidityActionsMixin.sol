@@ -181,7 +181,7 @@ abstract contract UniswapV3LiquidityActionsMixin is AssetHelpers {
 
         _amounts = new uint256[](2);
         for (uint256 i; i < _nftIdsCopy.length; i++) {
-            uint160 _sqrtPriceX96 = __getSqrtPriceX96(_nftIdsCopy[i]);
+            uint160 _sqrtPriceX96 = __getSqrtPriceX96();
             (uint256 _amount0, uint256 _amount1) = __getPositionTotal(
                 _nftIdsCopy[i],
                 _sqrtPriceX96
@@ -202,7 +202,7 @@ abstract contract UniswapV3LiquidityActionsMixin is AssetHelpers {
         );
     }
 
-    function __getSqrtPriceX96(uint256 _nftId) internal view returns (uint160 _sqrtPriceX96){
+    function __getSqrtPriceX96() internal view returns (uint160 _sqrtPriceX96){
         (_sqrtPriceX96,,,,,,) = pool.slot0();
     }
 
@@ -216,7 +216,7 @@ abstract contract UniswapV3LiquidityActionsMixin is AssetHelpers {
 
     /// @notice Gets the `NON_FUNGIBLE_TOKEN_MANAGER` variable
     /// @return The `NON_FUNGIBLE_TOKEN_MANAGER` variable value
-    function getNonFungibleTokenManager() public view returns (address) {
+    function getNonFungibleTokenManager() public pure returns (address) {
         return address(NONFUNGIBLE_POSITION_MANAGER);
     }
 }
