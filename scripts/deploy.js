@@ -20,12 +20,18 @@ const {
 } = require('../config/strategy/strategy-config.js');
 
 const {
+	CHAINLINK
+} = require("../config/mainnet-fork-test-config");
+
+const {
 	deploy,
 	deployProxy
 } = require('../utils/deploy-utils');
 
 // === Utils === //
 const VaultContract = hre.artifacts.require("IVault");
+const ValueInterpreterContract = hre.artifacts.require("ValueInterpreter");
+const ChainlinkPriceFeedContract = hre.artifacts.require("ChainlinkPriceFeed");
 
 // === Constants === //
 const Vault = 'Vault';
@@ -122,6 +128,25 @@ const addDependAddress = async (dependName) => {
 		return;
 	});
 }
+
+
+const questionOfUpdateType = [{
+	type: 'list',
+	name: 'type',
+	message: 'Please select the type to be update？\n',
+	choices: [
+		{
+			key: 'Update aggregator',
+			name: 'Update aggregator',
+			value: 1,
+		},
+		{
+			key: 'Not Update',
+			name: 'Not Update',
+			value: 0,
+		}
+	]
+}];
 
 /**
  * Basic Deployment Logic
@@ -493,6 +518,41 @@ const main = async () => {
 	await addStrategies(cVault, allArray, increaseArray);
 	console.log('getStrategies=', await cVault.getStrategies());
 	console.table(addressMap);
+	let updateType = process.env.AGGREGATOR_UPDATE_TYPE_VALUE;
+	if(!updateType){
+		updateType = await inquirer.prompt(questionOfUpdateType).then((answers) => {
+			const {
+				type
+			} = answers;
+
+			return type;
+		})
+	}
+	if (updateType) {
+		let primitives = []
+		let aggregators = []
+		let heartbeats = []
+		const valueInterpreter = await ValueInterpreterContract.at(addressMap[ValueInterpreter]);
+		const chainlinkPriceFeedAddr = await valueInterpreter.getPrimitivePriceFeed()
+
+		const chainlinkPriceFeed = await ChainlinkPriceFeedContract.at(chainlinkPriceFeedAddr)
+
+		for (const key in CHAINLINK.aggregators) {
+			if (Object.hasOwnProperty.call(CHAINLINK.aggregators, key)) {
+				const aggregator = CHAINLINK.aggregators[key]
+				if (await chainlinkPriceFeed.isSupportedAsset(aggregator.primitive)) {
+					primitives.push(aggregator.primitive)
+					aggregators.push(aggregator.aggregator)
+					heartbeats.push(60 * 60 * 24 * 365)
+					console.log(`will update ${aggregator.primitive} aggregator`)
+				}
+			}
+		}
+
+		await chainlinkPriceFeed.updatePrimitives(primitives, aggregators, heartbeats);
+
+		console.log('update aggregator successfully')
+	}
 };
 
 main().then(() => process.exit(0))
