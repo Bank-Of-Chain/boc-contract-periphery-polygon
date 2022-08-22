@@ -159,7 +159,7 @@ describe('[Scenario Test] Two Users Investment (One Deposit and One Withdraw)', 
     });
     //20%
     // await vault.setTrusteeFeeBps(0);
-    await vault.setUnderlyingUnitsPerShare(BigInt(1e18));
+    // await vault.setUnderlyingUnitsPerShare(BigInt(1e18));
     await vault.setRedeemFeeBps(0);
     await vault.setRebaseThreshold(1);
     await dripper.setDripDuration(3600 * 12);

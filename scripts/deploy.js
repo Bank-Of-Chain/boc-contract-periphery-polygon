@@ -297,24 +297,27 @@ const addStrategies = async (vault, allArray, increaseArray) => {
 	if (isEmpty(vault)) {
 		vault = await VaultContract.at(addressMap[Vault]);
 	}
-	return inquirer.prompt(questions).then((answers) => {
-		const {
-			type
-		} = answers;
-		if (!type) {
-			return
+	let type = process.env.STRATEGY_TYPE_VALUE;
+	if (!type) {
+		type = await inquirer.prompt(questions).then((answers) => {
+			const {
+				type
+			} = answers;
+			return type;
+		});
+	}
+	if (!type) {
+		return
+	}
+	const nextArray = type === 1 ? allArray : increaseArray
+
+	return vault.addStrategy(nextArray.map(item => {
+		return {
+			strategy: item.strategy,
+			profitLimitRatio: item.profitLimitRatio,
+			lossLimitRatio: item.lossLimitRatio
 		}
-
-		const nextArray = type === 1 ? allArray : increaseArray
-
-		return vault.addStrategy(nextArray.map(item => {
-			return {
-				strategy: item.strategy,
-				profitLimitRatio: item.profitLimitRatio,
-				lossLimitRatio: item.lossLimitRatio
-			}
-		}));
-	})
+	}));
 }
 
 const main = async () => {
@@ -430,9 +433,9 @@ const main = async () => {
 		await pegToken.deployed();
 		addressMap[PegToken] = pegToken.address;
 		await cVault.setPegTokenAddress(addressMap[PegToken]);
-		await cVault.setRebaseThreshold(1);
-		await cVault.setUnderlyingUnitsPerShare(new BigNumber(10).pow(18).toFixed());
-		await cVault.setMaxTimestampBetweenTwoReported(604800);
+		// await cVault.setRebaseThreshold(1);
+		// await cVault.setUnderlyingUnitsPerShare(new BigNumber(10).pow(18).toFixed());
+		// await cVault.setMaxTimestampBetweenTwoReported(604800);
 		console.log("maxTimestampBetweenTwoReported:", new BigNumber(await cVault.maxTimestampBetweenTwoReported()).toFixed());
 	}
 
