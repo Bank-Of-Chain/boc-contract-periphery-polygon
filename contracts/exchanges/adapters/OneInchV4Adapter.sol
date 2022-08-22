@@ -28,15 +28,14 @@ contract OneInchV4Adapter is IExchangeAdapter {
     bytes4(keccak256('clipperSwapToWithPermit(address,address,address,uint256,uint256,bytes)'))
     ];
 
-    address private immutable AGGREGATION_ROUTER_V4 =
-        address(0x1111111254fb6c44bAC0beD2854e76F90643097d);
+    address private constant AGGREGATION_ROUTER_V4 = 0x1111111254fb6c44bAC0beD2854e76F90643097d;
 
     receive() external payable {
     }
 
     /// @notice Provides a constant string identifier for an adapter
     /// @return identifier_ An identifier string
-    function identifier() external pure override returns (string memory identifier_) {
+    function identifier() external pure override returns (string memory) {
         return "oneInchV4";
     }
 
@@ -50,19 +49,19 @@ contract OneInchV4Adapter is IExchangeAdapter {
         IERC20(_sd.srcToken).safeApprove(AGGREGATION_ROUTER_V4, 0);
         IERC20(_sd.srcToken).safeApprove(AGGREGATION_ROUTER_V4, _sd.amount);
         console.log("[OneInchV4Adapter] start swap");
-        uint256 toTokenBefore = IERC20(_sd.dstToken).balanceOf(address(this));
+        uint256 _toTokenBefore = IERC20(_sd.dstToken).balanceOf(address(this));
         bytes memory _callData = _getCallData(_data, _sd);
-        (bool success, bytes memory result) = AGGREGATION_ROUTER_V4.call(_callData);
+        (bool _success, bytes memory _result) = AGGREGATION_ROUTER_V4.call(_callData);
 
-        if (!success) {
-            revert(RevertReasonParser.parse(result, "1inch V4 swap failed: "));
+        if (!_success) {
+            revert(RevertReasonParser.parse(_result, "1inch V4 swap failed: "));
         }
         console.log("[OneInchV4Adapter] swap ok");
-        uint256 exchangeAmount = IERC20(_sd.dstToken).balanceOf(address(this)) - toTokenBefore;
-        console.log("[OneInchV4Adapter] swap receive target amount:", exchangeAmount);
-        IERC20(_sd.dstToken).safeTransfer(_sd.receiver, exchangeAmount);
+        uint256 _exchangeAmount = IERC20(_sd.dstToken).balanceOf(address(this)) - _toTokenBefore;
+        console.log("[OneInchV4Adapter] swap receive target amount:", _exchangeAmount);
+        IERC20(_sd.dstToken).safeTransfer(_sd.receiver, _exchangeAmount);
         console.log("[OneInchV4Adapter] transfer ok");
-        return exchangeAmount;
+        return _exchangeAmount;
     }
 
     function _getCallData(bytes calldata _data, SwapDescription calldata _sd) private view returns(bytes memory){

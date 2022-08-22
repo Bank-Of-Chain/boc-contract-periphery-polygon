@@ -33,7 +33,7 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
 
     /// @notice Provides a constant string identifier for an adapter
     /// @return identifier_ An identifier string
-    function identifier() external pure override returns (string memory identifier_) {
+    function identifier() external pure override returns (string memory) {
         return "paraswap";
     }
 
@@ -45,20 +45,14 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
     ) external override payable returns (uint256) {
         require(_method < SWAP_METHOD_SELECTOR.length, "ParaswapAdapter method out of range");
         console.log("---paraswap swap method", _method);
-        bytes4 selector = SWAP_METHOD_SELECTOR[_method];
-        bytes memory data = abi.encodeWithSelector(selector, _encodedCallArgs, _sd);
-        uint256 toTokenBefore = IERC20(_sd.dstToken).balanceOf(_sd.receiver);
-        (bool success, bytes memory result) = address(this).delegatecall(data);
-        if (success) {
-//            console.log(
-//                "paraswap swap toToken %s exhangeAmount %d actual got amount %d",
-//                _sd.dstToken,
-//                abi.decode(result, (uint256)),
-//                IERC20(_sd.dstToken).balanceOf(_sd.receiver) - toTokenBefore
-//            );
-            return IERC20(_sd.dstToken).balanceOf(_sd.receiver) - toTokenBefore;
+        bytes4 _selector = SWAP_METHOD_SELECTOR[_method];
+        bytes memory _data = abi.encodeWithSelector(_selector, _encodedCallArgs, _sd);
+        uint256 _toTokenBefore = IERC20(_sd.dstToken).balanceOf(_sd.receiver);
+        (bool _success, bytes memory _result) = address(this).delegatecall(_data);
+        if (_success) {
+            return IERC20(_sd.dstToken).balanceOf(_sd.receiver) - _toTokenBefore;
         } else {
-            revert(RevertReasonParser.parse(result, "callBytes failed: "));
+            revert(RevertReasonParser.parse(_result, "callBytes failed: "));
         }
     }
 
@@ -67,22 +61,19 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
         payable
         returns (uint256)
     {
-        Utils.SellData memory data = abi.decode(_encodedCallArgs, (Utils.SellData));
+        Utils.SellData memory _data = abi.decode(_encodedCallArgs, (Utils.SellData));
 
-        __validateFromTokenAmount(data.fromToken, _sd);
-        __validateToTokenAddress(data.path[data.path.length - 1].to, _sd);
+        __validateFromTokenAmount(_data.fromToken, _sd);
+        __validateToTokenAddress(_data.path[_data.path.length - 1].to, _sd);
 
-        data.expectedAmount = data.expectedAmount.mul(_sd.amount).div(data.fromAmount);
-        data.toAmount = _sd.amount.mul(data.toAmount).div(data.fromAmount);
-        data.fromAmount = _sd.amount;
-        //        data.fromAmount = _sd.amount;
-        //        data.expectedAmount = _sd.expectedReturn;
-        //        data.toAmount = _sd.minReturn;
+        _data.expectedAmount = _data.expectedAmount.mul(_sd.amount).div(_data.fromAmount);
+        _data.toAmount = _sd.amount.mul(_data.toAmount).div(_data.fromAmount);
+        _data.fromAmount = _sd.amount;
 
-        data.beneficiary = payable(_sd.receiver);
-        data.deadline = block.timestamp + 300;
+        _data.beneficiary = payable(_sd.receiver);
+        _data.deadline = block.timestamp + 300;
 
-        return __multiSwap(data);
+        return __multiSwap(_data);
     }
 
     function megaSwap(bytes calldata _encodedCallArgs, SwapDescription calldata _sd)
@@ -90,27 +81,24 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
         payable
         returns (uint256)
     {
-        Utils.MegaSwapSellData memory data = abi.decode(
+        Utils.MegaSwapSellData memory _data = abi.decode(
             _encodedCallArgs,
             (Utils.MegaSwapSellData)
         );
 
-        __validateFromTokenAmount(data.fromToken, _sd);
-        for (uint256 i = 0; i < data.path.length; i++) {
-            Utils.MegaSwapPath memory megaSwapPath = data.path[i];
-            __validateToTokenAddress(megaSwapPath.path[megaSwapPath.path.length - 1].to, _sd);
+        __validateFromTokenAmount(_data.fromToken, _sd);
+        for (uint256 i = 0; i < _data.path.length; i++) {
+            Utils.MegaSwapPath memory _megaSwapPath = _data.path[i];
+            __validateToTokenAddress(_megaSwapPath.path[_megaSwapPath.path.length - 1].to, _sd);
         }
 
-        data.expectedAmount = data.expectedAmount.mul(_sd.amount).div(data.fromAmount);
-        data.toAmount = _sd.amount.mul(data.toAmount).div(data.fromAmount);
-        data.fromAmount = _sd.amount;
-        //        data.fromAmount = _sd.amount;
-        //        data.expectedAmount = _sd.expectedReturn;
-        //        data.toAmount = _sd.minReturn;
-        data.beneficiary = payable(_sd.receiver);
-        data.deadline = block.timestamp + 300;
+        _data.expectedAmount = _data.expectedAmount.mul(_sd.amount).div(_data.fromAmount);
+        _data.toAmount = _sd.amount.mul(_data.toAmount).div(_data.fromAmount);
+        _data.fromAmount = _sd.amount;
+        _data.beneficiary = payable(_sd.receiver);
+        _data.deadline = block.timestamp + 300;
 
-        return __megaSwap(data);
+        return __megaSwap(_data);
     }
 
     function protectedMultiSwap(bytes calldata _encodedCallArgs, SwapDescription calldata _sd)
@@ -118,21 +106,18 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
         payable
         returns (uint256)
     {
-        Utils.SellData memory data = abi.decode(_encodedCallArgs, (Utils.SellData));
+        Utils.SellData memory _data = abi.decode(_encodedCallArgs, (Utils.SellData));
 
-        __validateFromTokenAmount(data.fromToken, _sd);
-        __validateToTokenAddress(data.path[data.path.length - 1].to, _sd);
+        __validateFromTokenAmount(_data.fromToken, _sd);
+        __validateToTokenAddress(_data.path[_data.path.length - 1].to, _sd);
 
-        data.expectedAmount = data.expectedAmount.mul(_sd.amount).div(data.fromAmount);
-        data.toAmount = _sd.amount.mul(data.toAmount).div(data.fromAmount);
-        data.fromAmount = _sd.amount;
-        //        data.fromAmount = _sd.amount;
-        //        data.expectedAmount = _sd.expectedReturn;
-        //        data.toAmount = _sd.minReturn;
-        data.beneficiary = payable(_sd.receiver);
-        data.deadline = block.timestamp + 300;
+        _data.expectedAmount = _data.expectedAmount.mul(_sd.amount).div(_data.fromAmount);
+        _data.toAmount = _sd.amount.mul(_data.toAmount).div(_data.fromAmount);
+        _data.fromAmount = _sd.amount;
+        _data.beneficiary = payable(_sd.receiver);
+        _data.deadline = block.timestamp + 300;
 
-        return __protectedMultiSwap(data);
+        return __protectedMultiSwap(_data);
     }
 
     function protectedMegaSwap(bytes calldata _encodedCallArgs, SwapDescription calldata _sd)
@@ -140,27 +125,24 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
         payable
         returns (uint256)
     {
-        Utils.MegaSwapSellData memory data = abi.decode(
+        Utils.MegaSwapSellData memory _data = abi.decode(
             _encodedCallArgs,
             (Utils.MegaSwapSellData)
         );
 
-        __validateFromTokenAmount(data.fromToken, _sd);
-        for (uint256 i = 0; i < data.path.length; i++) {
-            Utils.MegaSwapPath memory megaSwapPath = data.path[i];
-            __validateToTokenAddress(megaSwapPath.path[megaSwapPath.path.length - 1].to, _sd);
+        __validateFromTokenAmount(_data.fromToken, _sd);
+        for (uint256 i = 0; i < _data.path.length; i++) {
+            Utils.MegaSwapPath memory _megaSwapPath = _data.path[i];
+            __validateToTokenAddress(_megaSwapPath.path[_megaSwapPath.path.length - 1].to, _sd);
         }
 
-        data.expectedAmount = data.expectedAmount.mul(_sd.amount).div(data.fromAmount);
-        data.toAmount = _sd.amount.mul(data.toAmount).div(data.fromAmount);
-        data.fromAmount = _sd.amount;
-        //        data.fromAmount = _sd.amount;
-        //        data.expectedAmount = _sd.expectedReturn;
-        //        data.toAmount = _sd.minReturn;
-        data.beneficiary = payable(_sd.receiver);
-        data.deadline = block.timestamp + 300;
+        _data.expectedAmount = _data.expectedAmount.mul(_sd.amount).div(_data.fromAmount);
+        _data.toAmount = _sd.amount.mul(_data.toAmount).div(_data.fromAmount);
+        _data.fromAmount = _sd.amount;
+        _data.beneficiary = payable(_sd.receiver);
+        _data.deadline = block.timestamp + 300;
 
-        return __protectedMegaSwap(data);
+        return __protectedMegaSwap(_data);
     }
 
     function protectedSimpleSwap(bytes calldata _encodedCallArgs, SwapDescription calldata _sd)
@@ -168,21 +150,18 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
         payable
         returns (uint256)
     {
-        Utils.SimpleData memory data = abi.decode(_encodedCallArgs, (Utils.SimpleData));
+        Utils.SimpleData memory _data = abi.decode(_encodedCallArgs, (Utils.SimpleData));
 
-        __validateFromTokenAmount(data.fromToken, _sd);
-        __validateToTokenAddress(data.toToken, _sd);
+        __validateFromTokenAmount(_data.fromToken, _sd);
+        __validateToTokenAddress(_data.toToken, _sd);
 
-        data.expectedAmount = data.expectedAmount.mul(_sd.amount).div(data.fromAmount);
-        data.toAmount = _sd.amount.mul(data.toAmount).div(data.fromAmount);
-        data.fromAmount = _sd.amount;
-        //        data.fromAmount = _sd.amount;
-        //        data.expectedAmount = _sd.expectedReturn;
-        //        data.toAmount = _sd.minReturn;
-        data.beneficiary = payable(_sd.receiver);
-        data.deadline = block.timestamp + 300;
+        _data.expectedAmount = _data.expectedAmount.mul(_sd.amount).div(_data.fromAmount);
+        _data.toAmount = _sd.amount.mul(_data.toAmount).div(_data.fromAmount);
+        _data.fromAmount = _sd.amount;
+        _data.beneficiary = payable(_sd.receiver);
+        _data.deadline = block.timestamp + 300;
 
-        return __protectedSimpleSwap(data);
+        return __protectedSimpleSwap(_data);
     }
 
     function simpleSwap(bytes calldata _encodedCallArgs, SwapDescription calldata _sd)
@@ -190,21 +169,18 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
         payable
         returns (uint256)
     {
-        Utils.SimpleData memory data = abi.decode(_encodedCallArgs, (Utils.SimpleData));
+        Utils.SimpleData memory _data = abi.decode(_encodedCallArgs, (Utils.SimpleData));
 
-        __validateFromTokenAmount(data.fromToken, _sd);
-        __validateToTokenAddress(data.toToken, _sd);
+        __validateFromTokenAmount(_data.fromToken, _sd);
+        __validateToTokenAddress(_data.toToken, _sd);
 
-        data.expectedAmount = data.expectedAmount.mul(_sd.amount).div(data.fromAmount);
-        data.toAmount = _sd.amount.mul(data.toAmount).div(data.fromAmount);
-        data.fromAmount = _sd.amount;
-        //        data.fromAmount = _sd.amount;
-        //        data.expectedAmount = _sd.expectedReturn;
-        //        data.toAmount = _sd.minReturn;
-        data.beneficiary = payable(_sd.receiver);
-        data.deadline = block.timestamp + 300;
+        _data.expectedAmount = _data.expectedAmount.mul(_sd.amount).div(_data.fromAmount);
+        _data.toAmount = _sd.amount.mul(_data.toAmount).div(_data.fromAmount);
+        _data.fromAmount = _sd.amount;
+        _data.beneficiary = payable(_sd.receiver);
+        _data.deadline = block.timestamp + 300;
 
-        return __simpleSwap(data);
+        return __simpleSwap(_data);
     }
 
     function swapOnUniswap(bytes calldata _encodedCallArgs, SwapDescription calldata _sd)
@@ -213,28 +189,25 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
         returns (uint256)
     {
         (
-            uint256 amountIn,
-            uint256 amountOutMin,
-            address[] memory path
+            uint256 _amountIn,
+            uint256 _amountOutMin,
+            address[] memory _path
         ) = __decodeSwapOnUniswapArgs(_encodedCallArgs);
 
-        address toToken = path[path.length - 1];
+        address _toToken = _path[_path.length - 1];
 
-        __validateFromTokenAmount(path[0], _sd);
-        __validateToTokenAddress(toToken, _sd);
+        __validateFromTokenAmount(_path[0], _sd);
+        __validateToTokenAddress(_toToken, _sd);
 
-        amountOutMin = _sd.amount.mul(amountOutMin).div(amountIn);
-        amountIn = _sd.amount;
+        _amountOutMin = _sd.amount.mul(_amountOutMin).div(_amountIn);
+        _amountIn = _sd.amount;
 
-        //        amountIn = _sd.amount;
-        //        amountOutMin = _sd.minReturn;
+        uint256 _toTokenBefore = IERC20(_toToken).balanceOf(address(this));
+        __swapOnUniswap(_amountIn, _amountOutMin, _path);
+        uint256 _amount = IERC20(_toToken).balanceOf(address(this)).sub(_toTokenBefore);
 
-        uint256 toTokenBefore = IERC20(toToken).balanceOf(address(this));
-        __swapOnUniswap(amountIn, amountOutMin, path);
-        uint256 amount = IERC20(toToken).balanceOf(address(this)).sub(toTokenBefore);
-
-        IERC20(toToken).safeTransfer(_sd.receiver, amount);
-        return amount;
+        IERC20(_toToken).safeTransfer(_sd.receiver, _amount);
+        return _amount;
     }
 
     function swapOnUniswapFork(bytes calldata _encodedCallArgs, SwapDescription calldata _sd)
@@ -245,27 +218,25 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
         (
             address factory,
             bytes32 initCode,
-            uint256 amountIn,
-            uint256 amountOutMin,
-            address[] memory path
+            uint256 _amountIn,
+            uint256 _amountOutMin,
+            address[] memory _path
         ) = __decodeSwapOnUniswapForkArgs(_encodedCallArgs);
 
-        address toToken = path[path.length - 1];
+        address _toToken = _path[_path.length - 1];
 
-        __validateFromTokenAmount(path[0], _sd);
-        __validateToTokenAddress(toToken, _sd);
+        __validateFromTokenAmount(_path[0], _sd);
+        __validateToTokenAddress(_toToken, _sd);
 
-        amountOutMin = _sd.amount.mul(amountOutMin).div(amountIn);
-        amountIn = _sd.amount;
-        //        amountIn = _sd.amount;
-        //        amountOutMin = _sd.minReturn;
+        _amountOutMin = _sd.amount.mul(_amountOutMin).div(_amountIn);
+        _amountIn = _sd.amount;
 
-        uint256 toTokenBefore = IERC20(toToken).balanceOf(address(this));
-        __swapOnUniswapFork(factory, initCode, amountIn, amountOutMin, path);
-        uint256 amount = IERC20(toToken).balanceOf(address(this)) - toTokenBefore;
+        uint256 _toTokenBefore = IERC20(_toToken).balanceOf(address(this));
+        __swapOnUniswapFork(factory, initCode, _amountIn, _amountOutMin, _path);
+        uint256 _amount = IERC20(_toToken).balanceOf(address(this)) - _toTokenBefore;
 
-        IERC20(toToken).safeTransfer(_sd.receiver, amount);
-        return amount;
+        IERC20(_toToken).safeTransfer(_sd.receiver, _amount);
+        return _amount;
     }
 
     function swapOnUniswapV2Fork(bytes calldata _encodedCallArgs, SwapDescription calldata _sd)
@@ -274,36 +245,33 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
         returns (uint256)
     {
         (
-            address tokenIn,
-            uint256 amountIn,
-            uint256 amountOutMin,
-            address weth,
-            uint256[] memory pools
+            address _tokenIn,
+            uint256 _amountIn,
+            uint256 _amountOutMin,
+            address _weth,
+            uint256[] memory _pools
         ) = __decodeSwapOnUniswapV2ForkArgs(_encodedCallArgs);
 
-        __validateFromTokenAmount(tokenIn, _sd);
-        //        __validateToTokenAddress(toToken, _sd);
+        __validateFromTokenAmount(_tokenIn, _sd);
 
-        amountOutMin = _sd.amount.mul(amountOutMin).div(amountIn);
-        amountIn = _sd.amount;
-        //        amountIn = _sd.amount;
-        //        amountOutMin = _sd.minReturn;
+        _amountOutMin = _sd.amount.mul(_amountOutMin).div(_amountIn);
+        _amountIn = _sd.amount;
 
-        uint256 toTokenBefore = IERC20(_sd.dstToken).balanceOf(address(this));
-        __swapOnUniswapV2Fork(tokenIn, amountIn, amountOutMin, weth, pools);
-        uint256 amount = IERC20(_sd.dstToken).balanceOf(address(this)) - toTokenBefore;
+        uint256 _toTokenBefore = IERC20(_sd.dstToken).balanceOf(address(this));
+        __swapOnUniswapV2Fork(_tokenIn, _amountIn, _amountOutMin, _weth, _pools);
+        uint256 _amount = IERC20(_sd.dstToken).balanceOf(address(this)) - _toTokenBefore;
 
-        IERC20(_sd.dstToken).safeTransfer(_sd.receiver, amount);
-        return amount;
+        IERC20(_sd.dstToken).safeTransfer(_sd.receiver, _amount);
+        return _amount;
     }
 
     function __decodeSwapOnUniswapArgs(bytes memory _encodedCallArgs)
         private
         pure
         returns (
-            uint256 amountIn_,
-            uint256 amountOutMin_,
-            address[] memory path_
+            uint256 _amountIn,
+            uint256 _amountOutMin,
+            address[] memory _path
         )
     {
         return abi.decode(_encodedCallArgs, (uint256, uint256, address[]));
@@ -313,11 +281,11 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
         private
         pure
         returns (
-            address factory_,
-            bytes32 initCode_,
-            uint256 amountIn_,
-            uint256 amountOutMin_,
-            address[] memory path_
+            address _factory,
+            bytes32 _initCode,
+            uint256 _amountIn,
+            uint256 _amountOutMin,
+            address[] memory _path
         )
     {
         return abi.decode(_encodedCallArgs, (address, bytes32, uint256, uint256, address[]));
@@ -327,11 +295,11 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
         private
         pure
         returns (
-            address tokenIn_,
-            uint256 amountIn_,
-            uint256 amountOutMin_,
-            address weth_,
-            uint256[] memory pools_
+            address _tokenIn,
+            uint256 _amountIn,
+            uint256 _amountOutMin,
+            address _weth,
+            uint256[] memory _pools
         )
     {
         return abi.decode(_encodedCallArgs, (address, uint256, uint256, address, uint256[]));
@@ -343,47 +311,45 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
         returns (uint256)
     {
         (
-            address fromToken,
-            address toToken,
-            uint256 fromAmount,
-            uint256 amountOutMin,
-            address exchange,
-            bytes memory payload
+            address _fromToken,
+            address _toToken,
+            uint256 _fromAmount,
+            uint256 _amountOutMin,
+            address _exchange,
+            bytes memory _payload
         ) = __decodeSwapOnZeroXv2Args(_encodedCallArgs);
 
-        __validateFromTokenAmount(fromToken, _sd);
-        __validateToTokenAddress(toToken, _sd);
+        __validateFromTokenAmount(_fromToken, _sd);
+        __validateToTokenAddress(_toToken, _sd);
 
-        amountOutMin = _sd.amount.mul(amountOutMin).div(fromAmount);
-        fromAmount = _sd.amount;
-        //        fromAmount = _sd.amount;
-        //        amountOutMin = _sd.minReturn;
+        _amountOutMin = _sd.amount.mul(_amountOutMin).div(_fromAmount);
+        _fromAmount = _sd.amount;
 
-        uint256 toTokenBefore = IERC20(toToken).balanceOf(address(this));
+        uint256 _toTokenBefore = IERC20(_toToken).balanceOf(address(this));
         __swapOnZeroXv2(
-            IERC20(fromToken),
-            IERC20(toToken),
-            fromAmount,
-            amountOutMin,
-            exchange,
-            payload
+            IERC20(_fromToken),
+            IERC20(_toToken),
+            _fromAmount,
+            _amountOutMin,
+            _exchange,
+            _payload
         );
-        uint256 amount = IERC20(toToken).balanceOf(address(this)) - toTokenBefore;
+        uint256 _amount = IERC20(_toToken).balanceOf(address(this)) - _toTokenBefore;
 
-        IERC20(toToken).safeTransfer(_sd.receiver, amount);
-        return amount;
+        IERC20(_toToken).safeTransfer(_sd.receiver, _amount);
+        return _amount;
     }
 
     function __decodeSwapOnZeroXv2Args(bytes memory _encodedCallArgs)
         private
         pure
         returns (
-            address fromToken_,
-            address toToken_,
-            uint256 fromAmount_,
-            uint256 amountOutMin_,
-            address exchange_,
-            bytes memory payload_
+            address _fromToken,
+            address _toToken,
+            uint256 _fromAmount,
+            uint256 _amountOutMin,
+            address _exchange,
+            bytes memory _payload
         )
     {
         return abi.decode(_encodedCallArgs, (address, address, uint256, uint256, address, bytes));
@@ -395,47 +361,45 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
         returns (uint256)
     {
         (
-            address fromToken,
-            address toToken,
-            uint256 fromAmount,
-            uint256 amountOutMin,
-            address exchange,
-            bytes memory payload
+            address _fromToken,
+            address _toToken,
+            uint256 _fromAmount,
+            uint256 _amountOutMin,
+            address _exchange,
+            bytes memory _payload
         ) = __decodeSwapOnZeroXv4Args(_encodedCallArgs);
 
-        __validateFromTokenAmount(fromToken, _sd);
-        __validateToTokenAddress(toToken, _sd);
+        __validateFromTokenAmount(_fromToken, _sd);
+        __validateToTokenAddress(_toToken, _sd);
 
-        amountOutMin = _sd.amount.mul(amountOutMin).div(fromAmount);
-        fromAmount = _sd.amount;
-        //        fromAmount = _sd.amount;
-        //        amountOutMin = _sd.minReturn;
+        _amountOutMin = _sd.amount.mul(_amountOutMin).div(_fromAmount);
+        _fromAmount = _sd.amount;
 
-        uint256 toTokenBefore = IERC20(toToken).balanceOf(address(this));
+        uint256 _toTokenBefore = IERC20(_toToken).balanceOf(address(this));
         __swapOnZeroXv4(
-            IERC20(fromToken),
-            IERC20(toToken),
-            fromAmount,
-            amountOutMin,
-            exchange,
-            payload
+            IERC20(_fromToken),
+            IERC20(_toToken),
+            _fromAmount,
+            _amountOutMin,
+            _exchange,
+            _payload
         );
-        uint256 amount = IERC20(toToken).balanceOf(address(this)) - toTokenBefore;
+        uint256 _amount = IERC20(_toToken).balanceOf(address(this)) - _toTokenBefore;
 
-        IERC20(toToken).safeTransfer(_sd.receiver, amount);
-        return amount;
+        IERC20(_toToken).safeTransfer(_sd.receiver, _amount);
+        return _amount;
     }
 
     function __decodeSwapOnZeroXv4Args(bytes memory _encodedCallArgs)
         private
         pure
         returns (
-            address fromToken_,
-            address toToken_,
-            uint256 fromAmount_,
-            uint256 amountOutMin_,
-            address exchange_,
-            bytes memory payload_
+            address _fromToken,
+            address _toToken,
+            uint256 _fromAmount,
+            uint256 _amountOutMin,
+            address _exchange,
+            bytes memory _payload
         )
     {
         return abi.decode(_encodedCallArgs, (address, address, uint256, uint256, address, bytes));

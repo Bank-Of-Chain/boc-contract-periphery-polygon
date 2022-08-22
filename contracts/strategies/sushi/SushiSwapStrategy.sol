@@ -18,15 +18,15 @@ contract SushiSwapStrategy is BaseClaimableStrategy, UniswapV2LiquidityActionsMi
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     // UniswapV2Router02
-    address public constant ROUTER = address(0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506);
+    address public constant ROUTER = 0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506;
     // MiniChefV2
-    address public constant POOL = address(0x0769fd68dFb93167989C6f7254cd0D766Fb2841F);
+    address public constant POOL = 0x0769fd68dFb93167989C6f7254cd0D766Fb2841F;
     // WMATIC
-    address public constant REWARD = address(0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270);
+    address public constant REWARD = 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270;
     // SUSHI
-    address public constant SUSHI = address(0x0b3F868E0BE5597D5DB7fEB59E1CADBb0fdDa50a);
+    address public constant SUSHI = 0x0b3F868E0BE5597D5DB7fEB59E1CADBb0fdDa50a;
     // ComplexRewarderTime
-    address public constant REWARDER = address(0xa3378Ca78633B3b9b2255EAa26748770211163AE);
+    address public constant REWARDER = 0xa3378Ca78633B3b9b2255EAa26748770211163AE;
 
     uint256 public poolId;
     address public pair;
@@ -62,11 +62,11 @@ contract SushiSwapStrategy is BaseClaimableStrategy, UniswapV2LiquidityActionsMi
         (_ratios[0], _ratios[1], ) = IUniswapV2Pair(pair).getReserves();
     }
 
-    function getOutputsInfo() external view virtual override returns (OutputInfo[] memory outputsInfo) {
-        outputsInfo = new OutputInfo[](1);
-        OutputInfo memory info0 = outputsInfo[0];
-        info0.outputCode = 0;
-        info0.outputTokens = wants;
+    function getOutputsInfo() external view virtual override returns (OutputInfo[] memory _outputsInfo) {
+        _outputsInfo = new OutputInfo[](1);
+        OutputInfo memory _info0 = _outputsInfo[0];
+        _info0.outputCode = 0;
+        _info0.outputTokens = wants;
     }
 
     function getPositionDetail()
@@ -76,44 +76,44 @@ contract SushiSwapStrategy is BaseClaimableStrategy, UniswapV2LiquidityActionsMi
         returns (
             address[] memory _tokens,
             uint256[] memory _amounts,
-            bool isUsd,
-            uint256 usdValue
+            bool _isUsd,
+            uint256 _usdValue
         )
     {
         _tokens = wants;
         _amounts = new uint256[](2);
-        (uint112 reserve0, uint112 reserve1, ) = IUniswapV2Pair(pair).getReserves();
-        uint256 totalSupply = IUniswapV2Pair(pair).totalSupply();
-        uint256 lpAmount = balanceOfLpToken();
-        _amounts[0] = (reserve0 * lpAmount) / totalSupply + balanceOfToken(_tokens[0]);
-        _amounts[1] = (reserve1 * lpAmount) / totalSupply + balanceOfToken(_tokens[1]);
+        (uint112 _reserve0, uint112 _reserve1, ) = IUniswapV2Pair(pair).getReserves();
+        uint256 _totalSupply = IUniswapV2Pair(pair).totalSupply();
+        uint256 _lpAmount = balanceOfLpToken();
+        _amounts[0] = (_reserve0 * _lpAmount) / _totalSupply + balanceOfToken(_tokens[0]);
+        _amounts[1] = (_reserve1 * _lpAmount) / _totalSupply + balanceOfToken(_tokens[1]);
     }
 
-    function balanceOfLpToken() public view returns (uint256 lpAmount) {
+    function balanceOfLpToken() public view returns (uint256 _lpAmount) {
         return IMiniChef(POOL).userInfo(poolId, address(this)).amount;
     }
 
     function valueOfLpToken() public view returns (uint256) {
-        uint256 totalValue;
+        uint256 _totalValue;
         address[] memory _wants = wants;
-        (uint112 reserve0, uint112 reserve1, ) = IUniswapV2Pair(pair).getReserves();
-        if (reserve0 > 0) {
-            totalValue += queryTokenValue(_wants[0], reserve0);
+        (uint112 _reserve0, uint112 _reserve1, ) = IUniswapV2Pair(pair).getReserves();
+        if (_reserve0 > 0) {
+            _totalValue += queryTokenValue(_wants[0], _reserve0);
         }
-        if (reserve1 > 0) {
-            totalValue += queryTokenValue(_wants[1], reserve1);
+        if (_reserve1 > 0) {
+            _totalValue += queryTokenValue(_wants[1], _reserve1);
         }
-        return (totalValue * decimalUnitOfToken(pair)) / IUniswapV2Pair(pair).totalSupply();
+        return (_totalValue * decimalUnitOfToken(pair)) / IUniswapV2Pair(pair).totalSupply();
     }
 
-    function get3rdPoolAssets() external view override returns (uint256 targetPoolTotalAssets) {
+    function get3rdPoolAssets() external view override returns (uint256 _targetPoolTotalAssets) {
         address[] memory _wants = wants;
-        (uint112 reserve0, uint112 reserve1, ) = IUniswapV2Pair(pair).getReserves();
-        if (reserve0 > 0) {
-            targetPoolTotalAssets += queryTokenValue(_wants[0], reserve0);
+        (uint112 _reserve0, uint112 _reserve1, ) = IUniswapV2Pair(pair).getReserves();
+        if (_reserve0 > 0) {
+            _targetPoolTotalAssets += queryTokenValue(_wants[0], _reserve0);
         }
-        if (reserve1 > 0) {
-            targetPoolTotalAssets += queryTokenValue(_wants[1], reserve1);
+        if (_reserve1 > 0) {
+            _targetPoolTotalAssets += queryTokenValue(_wants[1], _reserve1);
         }
     }
 
@@ -138,7 +138,7 @@ contract SushiSwapStrategy is BaseClaimableStrategy, UniswapV2LiquidityActionsMi
             return;
         }
 
-        uint256 lpAmount = __uniswapV2Lend(
+        uint256 _lpAmount = __uniswapV2Lend(
             address(this),
             _assets[0],
             _assets[1],
@@ -149,8 +149,8 @@ contract SushiSwapStrategy is BaseClaimableStrategy, UniswapV2LiquidityActionsMi
         );
 
         IERC20Upgradeable(pair).safeApprove(POOL, 0);
-        IERC20Upgradeable(pair).safeApprove(POOL, lpAmount);
-        IMiniChef(POOL).deposit(poolId, lpAmount, address(this));
+        IERC20Upgradeable(pair).safeApprove(POOL, _lpAmount);
+        IMiniChef(POOL).deposit(poolId, _lpAmount, address(this));
         console.log("stakingPool.deposit(pid, liquidity) ok:");
     }
 

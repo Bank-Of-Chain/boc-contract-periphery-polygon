@@ -14,18 +14,18 @@ import "hardhat/console.sol";
 contract Synapse4UStrategy is BaseClaimableStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    //underlying token index in swap pool
-    uint8 internal constant tokenIndex = 1;
-    //swap pool index in MiniChef
-    uint256 internal constant poolId = 1;
-    address internal constant exitToken = address(0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063);
-    //swapPool.swapStorage() https://polygonscan.com/address/0x85fCD7Dd0a1e1A9FCD5FD886ED522dE8221C3EE5#readContract
-    address internal constant lpToken = address(0x7479e1Bc2F2473f9e78c89B4210eb6d55d33b645);
+    //underlying token _index in swap pool
+    uint8 internal constant TOKEN_INDEX = 1;
+    //swap pool _index in MiniChef
+    uint256 internal constant POOL_ID = 1;
+    address internal constant EXIT_TOKEN = 0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063;
+    //SWAP_POOL.swapStorage() https://polygonscan.com/address/0x85fCD7Dd0a1e1A9FCD5FD886ED522dE8221C3EE5#readContract
+    address internal constant LP_TOKEN = 0x7479e1Bc2F2473f9e78c89B4210eb6d55d33b645;
     //SYN
-    address internal constant rewardToken = 0xf8F9efC0db77d8881500bb06FF5D6ABc3070E695;
+    address internal constant REWARD_TOKEN = 0xf8F9efC0db77d8881500bb06FF5D6ABc3070E695;
     //swap pool to add/remove liquidity
-    IMetaSwap internal constant swapPool = IMetaSwap(0x85fCD7Dd0a1e1A9FCD5FD886ED522dE8221C3EE5);
-    IMiniChefV2 internal constant miniChef = IMiniChefV2(0x7875Af1a6878bdA1C129a4e2356A3fD040418Be5);
+    IMetaSwap internal constant SWAP_POOL = IMetaSwap(0x85fCD7Dd0a1e1A9FCD5FD886ED522dE8221C3EE5);
+    IMiniChefV2 internal constant MINICHEF = IMiniChefV2(0x7875Af1a6878bdA1C129a4e2356A3fD040418Be5);
 
     function initialize(
         address _vault,
@@ -56,27 +56,27 @@ contract Synapse4UStrategy is BaseClaimableStrategy {
         _assets = wants;
         _ratios = new uint256[](wants.length);
         for (uint8 i = 0; i < wants.length; i++) {
-            uint8 index = swapPool.getTokenIndex(wants[i]);
-            _ratios[i] = swapPool.getTokenBalance(index);
+            uint8 _index = SWAP_POOL.getTokenIndex(wants[i]);
+            _ratios[i] = SWAP_POOL.getTokenBalance(_index);
         }
     }
 
-    function getOutputsInfo() external view virtual override returns (OutputInfo[] memory outputsInfo) {
-        outputsInfo = new OutputInfo[](3);
-        OutputInfo memory info0 = outputsInfo[0];
-        info0.outputCode = 0;
-        info0.outputTokens = new address[](1);
-        info0.outputTokens[0] = wants[0];
+    function getOutputsInfo() external view virtual override returns (OutputInfo[] memory _outputsInfo) {
+        _outputsInfo = new OutputInfo[](3);
+        OutputInfo memory _info0 = _outputsInfo[0];
+        _info0.outputCode = 0;
+        _info0.outputTokens = new address[](1);
+        _info0.outputTokens[0] = wants[0];
 
-        OutputInfo memory info1 = outputsInfo[1];
-        info1.outputCode = 1;
-        info1.outputTokens = new address[](1);
-        info1.outputTokens[0] = wants[1];
+        OutputInfo memory _info1 = _outputsInfo[1];
+        _info1.outputCode = 1;
+        _info1.outputTokens = new address[](1);
+        _info1.outputTokens[0] = wants[1];
 
-        OutputInfo memory info2 = outputsInfo[2];
-        info2.outputCode = 2;
-        info2.outputTokens = new address[](1);
-        info2.outputTokens[0] = wants[2];
+        OutputInfo memory _info2 = _outputsInfo[2];
+        _info2.outputCode = 2;
+        _info2.outputTokens = new address[](1);
+        _info2.outputTokens[0] = wants[2];
     }
 
     function getPositionDetail()
@@ -86,32 +86,32 @@ contract Synapse4UStrategy is BaseClaimableStrategy {
         returns (
             address[] memory _tokens,
             uint256[] memory _amounts,
-            bool isUsd,
-            uint256 usdValue
+            bool _isUsd,
+            uint256 _usdValue
         )
     {
         _tokens = new address[](1);
-        _tokens[0] = exitToken;
+        _tokens[0] = EXIT_TOKEN;
 
         _amounts = new uint256[](1);
-        _amounts[0] = balanceOfToken(exitToken) + estimateDepositAsset();
+        _amounts[0] = balanceOfToken(EXIT_TOKEN) + estimateDepositAsset();
     }
 
     function estimateDepositAsset() public view returns (uint256) {
-        (uint256 lpAmount, ) = miniChef.userInfo(poolId, address(this));
-        return (lpAmount * getValueOfLp()) / decimalUnitOfToken(lpToken);
+        (uint256 _lpAmount, ) = MINICHEF.userInfo(POOL_ID, address(this));
+        return (_lpAmount * getValueOfLp()) / decimalUnitOfToken(LP_TOKEN);
     }
 
-    //  Calculate the amount of underlying token available to withdraw when withdrawing via only single token
+    //  Calculate the _amount of underlying token available to withdraw when withdrawing via only single token
     function getValueOfLp() public view returns (uint256) {
-        return swapPool.calculateRemoveLiquidityOneToken(decimalUnitOfToken(lpToken), tokenIndex);
+        return SWAP_POOL.calculateRemoveLiquidityOneToken(decimalUnitOfToken(LP_TOKEN), TOKEN_INDEX);
     }
 
     function get3rdPoolAssets() external view override returns (uint256) {
         // 3rd pool total assets by underlying token
-        uint256 poolTotalAssets = (IERC20Upgradeable(lpToken).totalSupply() * getValueOfLp()) /
-            decimalUnitOfToken(lpToken);
-        return queryTokenValue(exitToken, poolTotalAssets);
+        uint256 _poolTotalAssets = (IERC20Upgradeable(LP_TOKEN).totalSupply() * getValueOfLp()) /
+            decimalUnitOfToken(LP_TOKEN);
+        return queryTokenValue(EXIT_TOKEN, _poolTotalAssets);
     }
 
     function claimRewards()
@@ -119,38 +119,38 @@ contract Synapse4UStrategy is BaseClaimableStrategy {
         override
         returns (address[] memory _rewardsTokens, uint256[] memory _claimAmounts)
     {
-        miniChef.harvest(poolId, address(this));
+        MINICHEF.harvest(POOL_ID, address(this));
 
         _rewardsTokens = new address[](1);
-        _rewardsTokens[0] = rewardToken;
+        _rewardsTokens[0] = REWARD_TOKEN;
 
         _claimAmounts = new uint256[](1);
-        _claimAmounts[0] = balanceOfToken(rewardToken);
+        _claimAmounts[0] = balanceOfToken(REWARD_TOKEN);
     }
 
     function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts) internal override {
         //add underlying token liquidity to swap pool,and get lp token from swap pool
-        uint256[] memory fullAmounts = new uint256[](4);
+        uint256[] memory _fullAmounts = new uint256[](4);
         for (uint256 i = 0; i < _assets.length; i++) {
-            uint256 amount = _amounts[i];
-            if (amount > 0) {
-                address token = address(_assets[i]);
-                IERC20Upgradeable(token).safeApprove(address(swapPool), 0);
-                IERC20Upgradeable(token).safeApprove(address(swapPool), amount);
-                console.log("depositTo3rdPool asset:%s,amount:%d", token, amount);
+            uint256 _amount = _amounts[i];
+            if (_amount > 0) {
+                address _token = address(_assets[i]);
+                IERC20Upgradeable(_token).safeApprove(address(SWAP_POOL), 0);
+                IERC20Upgradeable(_token).safeApprove(address(SWAP_POOL), _amount);
+                console.log("depositTo3rdPool asset:%s,_amount:%d", _token, _amount);
 
-                uint8 index = swapPool.getTokenIndex(token);
-                fullAmounts[index] = amount;
+                uint8 _index = SWAP_POOL.getTokenIndex(_token);
+                _fullAmounts[_index] = _amount;
             }
         }
 
-        swapPool.addLiquidity(fullAmounts, 0, block.timestamp);
+        SWAP_POOL.addLiquidity(_fullAmounts, 0, block.timestamp);
 
         //stack lp token to MiniChef to earn SYN reward token
-        uint256 lpAmount = balanceOfToken(lpToken);
-        IERC20Upgradeable(lpToken).safeApprove(address(miniChef), 0);
-        IERC20Upgradeable(lpToken).safeApprove(address(miniChef), lpAmount);
-        miniChef.deposit(poolId, lpAmount, address(this));
+        uint256 _lpAmount = balanceOfToken(LP_TOKEN);
+        IERC20Upgradeable(LP_TOKEN).safeApprove(address(MINICHEF), 0);
+        IERC20Upgradeable(LP_TOKEN).safeApprove(address(MINICHEF), _lpAmount);
+        MINICHEF.deposit(POOL_ID, _lpAmount, address(this));
     }
 
     function withdrawFrom3rdPool(
@@ -159,22 +159,22 @@ contract Synapse4UStrategy is BaseClaimableStrategy {
         uint256 _outputCode
     ) internal override {
         //release the stake of lp token
-        (uint256 lpAmountStakeInChef, ) = miniChef.userInfo(poolId, address(this));
-        uint256 lpAmountToWithdraw = (_withdrawShares * lpAmountStakeInChef) / _totalShares;
-        miniChef.withdraw(poolId, lpAmountToWithdraw, address(this));
+        (uint256 _lpAmountStakeInChef, ) = MINICHEF.userInfo(POOL_ID, address(this));
+        uint256 _lpAmountToWithdraw = (_withdrawShares * _lpAmountStakeInChef) / _totalShares;
+        MINICHEF.withdraw(POOL_ID, _lpAmountToWithdraw, address(this));
 
-        uint8 outputIndex = 3;
+        uint8 _outputIndex = 3;
         if (_outputCode == 0) {
-            outputIndex = 1;
+            _outputIndex = 1;
         } else if (_outputCode == 1) {
-            outputIndex = 2;
+            _outputIndex = 2;
         } else if (_outputCode == 2) {
-            outputIndex = 3;
+            _outputIndex = 3;
         }
         //remove liquidity from swap pool
-        uint256 actualLpTokenAmount = balanceOfToken(lpToken);
-        IERC20Upgradeable(lpToken).safeApprove(address(swapPool), 0);
-        IERC20Upgradeable(lpToken).safeApprove(address(swapPool), actualLpTokenAmount);
-        swapPool.removeLiquidityOneToken(actualLpTokenAmount, outputIndex, 0, block.timestamp);
+        uint256 _actualLpTokenAmount = balanceOfToken(LP_TOKEN);
+        IERC20Upgradeable(LP_TOKEN).safeApprove(address(SWAP_POOL), 0);
+        IERC20Upgradeable(LP_TOKEN).safeApprove(address(SWAP_POOL), _actualLpTokenAmount);
+        SWAP_POOL.removeLiquidityOneToken(_actualLpTokenAmount, _outputIndex, 0, block.timestamp);
     }
 }

@@ -8,10 +8,10 @@ import "../AssetHelpers.sol";
 /// @title UniswapV2ActionsMixin Contract
 /// @notice Mixin contract for interacting with Uniswap v2
 abstract contract UniswapV2LiquidityActionsMixin is AssetHelpers {
-    address internal UniswapV2Router2;
+    address internal uniswapV2Router2;
 
-    function _initializeUniswapV2(address _UniswapV2Router2) internal {
-        UniswapV2Router2 = _UniswapV2Router2;
+    function _initializeUniswapV2(address _uniswapV2Router2) internal {
+        uniswapV2Router2 = _uniswapV2Router2;
     }
 
     /// @dev Helper to add liquidity
@@ -23,12 +23,12 @@ abstract contract UniswapV2LiquidityActionsMixin is AssetHelpers {
         uint256 _amountBDesired,
         uint256 _amountAMin,
         uint256 _amountBMin
-    ) internal returns (uint256 liquidity) {
-        __approveAssetMaxAsNeeded(_tokenA, UniswapV2Router2, _amountADesired);
-        __approveAssetMaxAsNeeded(_tokenB, UniswapV2Router2, _amountBDesired);
+    ) internal returns (uint256 _liquidity) {
+        __approveAssetMaxAsNeeded(_tokenA, uniswapV2Router2, _amountADesired);
+        __approveAssetMaxAsNeeded(_tokenB, uniswapV2Router2, _amountBDesired);
 
         // Execute lend on Uniswap
-        (, , liquidity) = IUniswapV2Router2(UniswapV2Router2).addLiquidity(
+        (, , _liquidity) = IUniswapV2Router2(uniswapV2Router2).addLiquidity(
             _tokenA,
             _tokenB,
             _amountADesired,
@@ -50,11 +50,11 @@ abstract contract UniswapV2LiquidityActionsMixin is AssetHelpers {
         uint256 _amountAMin,
         uint256 _amountBMin
     ) internal returns (uint256, uint256) {
-        __approveAssetMaxAsNeeded(_poolToken, UniswapV2Router2, _poolTokenAmount);
+        __approveAssetMaxAsNeeded(_poolToken, uniswapV2Router2, _poolTokenAmount);
 
         // Execute redeem on Uniswap
         return
-            IUniswapV2Router2(UniswapV2Router2).removeLiquidity(
+            IUniswapV2Router2(uniswapV2Router2).removeLiquidity(
                 _tokenA,
                 _tokenB,
                 _poolTokenAmount,
@@ -66,7 +66,7 @@ abstract contract UniswapV2LiquidityActionsMixin is AssetHelpers {
     }
 
     /// @dev Helper to get the deadline for a Uniswap V2 action in a standardized way
-    function __uniswapV2GetActionDeadline() private view returns (uint256 deadline_) {
+    function __uniswapV2GetActionDeadline() private view returns (uint256) {
         return block.timestamp + 1;
     }
 }

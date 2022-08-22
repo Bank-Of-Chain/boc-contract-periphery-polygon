@@ -9,10 +9,8 @@ import "../AssetHelpersOldVersion.sol";
 import "hardhat/console.sol";
 
 abstract contract ParaSwapV5ActionsMixin is AssetHelpersOldVersion {
-    address internal constant PARA_SWAP_V5_AUGUSTUS_SWAPPER =
-        address(0xDEF171Fe48CF0115B1d80b88dc8eAB59176FEe57);
-    address internal constant PARA_SWAP_V5_TOKEN_TRANSFER_PROXY =
-        address(0x216B4B4Ba9F3e719726886d34a177484278Bfcae);
+    address internal constant PARA_SWAP_V5_AUGUSTUS_SWAPPER = 0xDEF171Fe48CF0115B1d80b88dc8eAB59176FEe57;
+    address internal constant PARA_SWAP_V5_TOKEN_TRANSFER_PROXY = 0x216B4B4Ba9F3e719726886d34a177484278Bfcae;
 
     function __multiSwap(Utils.SellData memory _data) internal returns (uint256) {
         __approveAssetMaxAsNeeded(
@@ -178,14 +176,14 @@ abstract contract ParaSwapV5ActionsMixin is AssetHelpersOldVersion {
     ///////////////////
 
     /// @notice Gets the `PARA_SWAP_V5_AUGUSTUS_SWAPPER` variable
-    /// @return augustusSwapper_ The `PARA_SWAP_V5_AUGUSTUS_SWAPPER` variable value
-    function getParaSwapV5AugustusSwapper() public pure returns (address augustusSwapper_) {
+    /// @return The `PARA_SWAP_V5_AUGUSTUS_SWAPPER` variable value
+    function getParaSwapV5AugustusSwapper() public pure returns (address) {
         return PARA_SWAP_V5_AUGUSTUS_SWAPPER;
     }
 
     /// @notice Gets the `PARA_SWAP_V5_TOKEN_TRANSFER_PROXY` variable
-    /// @return tokenTransferProxy_ The `PARA_SWAP_V5_TOKEN_TRANSFER_PROXY` variable value
-    function getParaSwapV5TokenTransferProxy() public pure returns (address tokenTransferProxy_) {
+    /// @return The `PARA_SWAP_V5_TOKEN_TRANSFER_PROXY` variable value
+    function getParaSwapV5TokenTransferProxy() public pure returns (address) {
         return PARA_SWAP_V5_TOKEN_TRANSFER_PROXY;
     }
 }

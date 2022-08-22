@@ -58,11 +58,11 @@ contract AaveLendStrategy is BaseClaimableStrategy {
         _ratios[0] = decimalUnitOfToken(_assets[0]);
     }
 
-    function getOutputsInfo() external view virtual override returns (OutputInfo[] memory outputsInfo) {
-        outputsInfo = new OutputInfo[](1);
-        OutputInfo memory info0 = outputsInfo[0];
-        info0.outputCode = 0;
-        info0.outputTokens = wants;
+    function getOutputsInfo() external view virtual override returns (OutputInfo[] memory _outputsInfo) {
+        _outputsInfo = new OutputInfo[](1);
+        OutputInfo memory _info0 = _outputsInfo[0];
+        _info0.outputCode = 0;
+        _info0.outputTokens = wants;
     }
 
     function getPositionDetail()
@@ -72,8 +72,8 @@ contract AaveLendStrategy is BaseClaimableStrategy {
         returns (
             address[] memory _tokens,
             uint256[] memory _amounts,
-            bool isUsd,
-            uint256 usdValue
+            bool _isUsd,
+            uint256 _usdValue
         )
     {
         _tokens = wants;
@@ -81,14 +81,14 @@ contract AaveLendStrategy is BaseClaimableStrategy {
         _amounts[0] = balanceOfToken(aToken) + balanceOfToken(_tokens[0]);
     }
 
-    function balanceOfLpToken() private view returns (uint256 lpAmount) {
-        lpAmount = balanceOfToken(aToken);
+    function balanceOfLpToken() private view returns (uint256 _lpAmount) {
+        _lpAmount = balanceOfToken(aToken);
     }
 
     function get3rdPoolAssets() external view override returns (uint256) {
         // address[] memory _wants = wants;
-        uint256 aTokenTotalSupply = IAToken(aToken).totalSupply();
-        return aTokenTotalSupply != 0 ? queryTokenValue(wants[0], aTokenTotalSupply) : 0;
+        uint256 _aTokenTotalSupply = IAToken(aToken).totalSupply();
+        return _aTokenTotalSupply != 0 ? queryTokenValue(wants[0], _aTokenTotalSupply) : 0;
     }
 
     function _getAssets() private view returns (address[] memory _assets) {

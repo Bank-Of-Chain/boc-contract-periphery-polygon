@@ -28,32 +28,32 @@ abstract contract AssetHelpers {
     function __getAssetBalances(address _target, address[] memory _assets)
         internal
         view
-        returns (uint256[] memory balances_)
+        returns (uint256[] memory _balances)
     {
-        balances_ = new uint256[](_assets.length);
+        _balances = new uint256[](_assets.length);
         for (uint256 i = 0; i < _assets.length; i++) {
-            balances_[i] = IERC20Upgradeable(_assets[i]).balanceOf(_target);
+            _balances[i] = IERC20Upgradeable(_assets[i]).balanceOf(_target);
         }
 
-        return balances_;
+        return _balances;
     }
 
     /// @dev Helper to transfer full asset balances from a target to the current contract.
     /// Requires an adequate allowance for each asset granted to the current contract for the target.
     function __pullFullAssetBalances(address _target, address[] memory _assets)
         internal
-        returns (uint256[] memory amountsTransferred_)
+        returns (uint256[] memory _amountsTransferred)
     {
-        amountsTransferred_ = new uint256[](_assets.length);
+        _amountsTransferred = new uint256[](_assets.length);
         for (uint256 i = 0; i < _assets.length; i++) {
-            IERC20Upgradeable assetContract = IERC20Upgradeable(_assets[i]);
-            amountsTransferred_[i] = assetContract.balanceOf(_target);
-            if (amountsTransferred_[i] > 0) {
-                assetContract.safeTransferFrom(_target, address(this), amountsTransferred_[i]);
+            IERC20Upgradeable _assetContract = IERC20Upgradeable(_assets[i]);
+            _amountsTransferred[i] = _assetContract.balanceOf(_target);
+            if (_amountsTransferred[i] > 0) {
+                _assetContract.safeTransferFrom(_target, address(this), _amountsTransferred[i]);
             }
         }
 
-        return amountsTransferred_;
+        return _amountsTransferred;
     }
 
     /// @dev Helper to transfer partial asset balances from a target to the current contract.
@@ -62,33 +62,33 @@ abstract contract AssetHelpers {
         address _target,
         address[] memory _assets,
         uint256[] memory _amountsToExclude
-    ) internal returns (uint256[] memory amountsTransferred_) {
-        amountsTransferred_ = new uint256[](_assets.length);
+    ) internal returns (uint256[] memory _amountsTransferred) {
+        _amountsTransferred = new uint256[](_assets.length);
         for (uint256 i = 0; i < _assets.length; i++) {
-            IERC20Upgradeable assetContract = IERC20Upgradeable(_assets[i]);
-            amountsTransferred_[i] = assetContract.balanceOf(_target) - _amountsToExclude[i];
-            if (amountsTransferred_[i] > 0) {
-                assetContract.safeTransferFrom(_target, address(this), amountsTransferred_[i]);
+            IERC20Upgradeable _assetContract = IERC20Upgradeable(_assets[i]);
+            _amountsTransferred[i] = _assetContract.balanceOf(_target) - _amountsToExclude[i];
+            if (_amountsTransferred[i] > 0) {
+                _assetContract.safeTransferFrom(_target, address(this), _amountsTransferred[i]);
             }
         }
 
-        return amountsTransferred_;
+        return _amountsTransferred;
     }
 
     /// @dev Helper to transfer full asset balances from the current contract to a target
     function __pushFullAssetBalances(address _target, address[] memory _assets)
         internal
-        returns (uint256[] memory amountsTransferred_)
+        returns (uint256[] memory _amountsTransferred)
     {
-        amountsTransferred_ = new uint256[](_assets.length);
+        _amountsTransferred = new uint256[](_assets.length);
         for (uint256 i = 0; i < _assets.length; i++) {
-            IERC20Upgradeable assetContract = IERC20Upgradeable(_assets[i]);
-            amountsTransferred_[i] = assetContract.balanceOf(address(this));
-            if (amountsTransferred_[i] > 0) {
-                assetContract.safeTransfer(_target, amountsTransferred_[i]);
+            IERC20Upgradeable _assetContract = IERC20Upgradeable(_assets[i]);
+            _amountsTransferred[i] = _assetContract.balanceOf(address(this));
+            if (_amountsTransferred[i] > 0) {
+                _assetContract.safeTransfer(_target, _amountsTransferred[i]);
             }
         }
 
-        return amountsTransferred_;
+        return _amountsTransferred;
     }
 }

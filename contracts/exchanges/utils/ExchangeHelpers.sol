@@ -14,8 +14,6 @@ abstract contract ExchangeHelpers {
         IExchangeAdapter.SwapDescription calldata _sd
     ) internal pure {
         require(_fromToken == _sd.srcToken, "srcToken diff");
-        //        require(_sd.amount == _fromAmount, 'fromAmount diff');
-        //        require(_sd.amount >= _fromAmount.mul(uint256(10000).sub(_sd.biasPercent)).div(10000) && _sd.amount <= _fromAmount.mul(uint256(10000).add(_sd.biasPercent)).div(10000), 'amount biasPercent error');
     }
 
     function __validateToTokenAddress(

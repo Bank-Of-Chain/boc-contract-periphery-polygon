@@ -5,10 +5,10 @@ pragma solidity ^0.8.0;
 import "./Balancer4UBaseStrategy.sol";
 
 contract BalancerUsdcUsdtDaiTusdStrategy is Balancer4UBaseStrategy {
-    bytes32 constant POOL_ID = 0x0d34e5dd4d8f043557145598e4e2dc286b35fd4f000000000000000000000068;
-    address constant USDT = address(0xc2132D05D31c914a87C6611C10748AEb04B58e8F);
-    address constant TUSD = address(0x2e1AD108fF1D8C782fcBbB89AAd783aC49586756);
-    address constant POOL_LP_TOKEN = 0x0d34e5dD4D8f043557145598E4e2dC286B35FD4f;
+    bytes32 private constant POOL_ID = 0x0d34e5dd4d8f043557145598e4e2dc286b35fd4f000000000000000000000068;
+    address private constant USDT = 0xc2132D05D31c914a87C6611C10748AEb04B58e8F;
+    address private constant TUSD = 0x2e1AD108fF1D8C782fcBbB89AAd783aC49586756;
+    address private constant POOL_LP_TOKEN = 0x0d34e5dD4D8f043557145598E4e2dC286B35FD4f;
 
     function initialize(
         address _vault,
