@@ -11,13 +11,13 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 
 contract TestAdapter is IExchangeAdapter {
     using SafeERC20Upgradeable for IERC20Upgradeable;
-    address valueInterpreter;
+    address private valueInterpreter;
 
     constructor(address _valueInterpreter) {
         valueInterpreter = _valueInterpreter;
     }
 
-    function identifier() external pure override returns (string memory identifier_) {
+    function identifier() external pure override returns (string memory) {
         return "testAdapter";
     }
 
@@ -26,25 +26,15 @@ contract TestAdapter is IExchangeAdapter {
         bytes calldata _encodedCallArgs,
         IExchangeAdapter.SwapDescription calldata _sd
     ) external override payable returns (uint256) {
-//        console.log(
-//            "[TestAdapter] swap:_sd.srcToken:%s, balanceOf:%s",
-//            _sd.srcToken,
-//            IERC20Upgradeable(_sd.srcToken).balanceOf(address(this))
-//        );
-//        console.log(
-//            "[TestAdapter] swap:_sd.dstToken:%s, balanceOf:%s",
-//            _sd.dstToken,
-//            IERC20Upgradeable(_sd.dstToken).balanceOf(address(this))
-//        );
-        uint256 amount = IValueInterpreter(valueInterpreter).calcCanonicalAssetValue(
+        uint256 _amount = IValueInterpreter(valueInterpreter).calcCanonicalAssetValue(
             _sd.srcToken,
             _sd.amount,
             _sd.dstToken
         );
-        console.log("[TestAdapter] swap:_sd.amount=%s, amount=%s", _sd.amount, amount);
+        console.log("[TestAdapter] swap:_sd._amount=%s, _amount=%s", _sd.amount, _amount);
         // Mock exchange
-        uint256 expectAmount = (amount * 1000) / 1000;
-        IERC20Upgradeable(_sd.dstToken).safeTransfer(_sd.receiver, expectAmount);
-        return expectAmount;
+        uint256 _expectAmount = (_amount * 1000) / 1000;
+        IERC20Upgradeable(_sd.dstToken).safeTransfer(_sd.receiver, _expectAmount);
+        return _expectAmount;
     }
 }

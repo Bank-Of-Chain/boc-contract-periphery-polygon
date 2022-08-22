@@ -15,8 +15,8 @@ abstract contract DodoPoolV2ActionsMixin {
         quoteStakePool = _quoteStakePool;
     }
 
-    address internal constant DODO = address(0xe4Bf2864ebeC7B7fDf6Eeca9BaCAe7cDfDAffe78);
-    address internal constant WMATIC = address(0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270);
+    address internal constant DODO = 0xe4Bf2864ebeC7B7fDf6Eeca9BaCAe7cDfDAffe78;
+    address internal constant WMATIC = 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270;
 
     // _i: rewardToken index, 0-DODO, 1-WMATIC
     function __claimRewards(address _stakePool, uint256 _i) internal {
@@ -27,20 +27,20 @@ abstract contract DodoPoolV2ActionsMixin {
         DodoStakePoolV2(_stakePool).withdraw(_amount);
     }
 
-    function balanceOfBaseLpToken() internal view returns (uint256 lpAmount) {
-        lpAmount = DodoStakePoolV2(baseStakePool).balanceOf(address(this));
+    function balanceOfBaseLpToken() internal view returns (uint256 _lpAmount) {
+        _lpAmount = DodoStakePoolV2(baseStakePool).balanceOf(address(this));
     }
 
-    function balanceOfQuoteLpToken() internal view returns (uint256 lpAmount) {
-        lpAmount = DodoStakePoolV2(quoteStakePool).balanceOf(address(this));
+    function balanceOfQuoteLpToken() internal view returns (uint256 _lpAmount) {
+        _lpAmount = DodoStakePoolV2(quoteStakePool).balanceOf(address(this));
     }
 
-    function getPendingReward(address _rewardToken) internal view returns (uint256 rewardAmount) {
-        rewardAmount = DodoStakePoolV2(baseStakePool).getPendingRewardByToken(
+    function getPendingReward(address _rewardToken) internal view returns (uint256 _rewardAmount) {
+        _rewardAmount = DodoStakePoolV2(baseStakePool).getPendingRewardByToken(
             address(this),
             _rewardToken
         );
-        rewardAmount += DodoStakePoolV2(quoteStakePool).getPendingRewardByToken(
+        _rewardAmount += DodoStakePoolV2(quoteStakePool).getPendingRewardByToken(
             address(this),
             _rewardToken
         );

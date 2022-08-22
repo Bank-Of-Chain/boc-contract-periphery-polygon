@@ -51,18 +51,18 @@ contract DodoV2Strategy is BaseClaimableStrategy, DodoPoolV2ActionsMixin {
         returns (address[] memory _assets, uint256[] memory _ratios)
     {
         _assets = wants;
-        (uint256 baseExpectedTarget, uint256 quoteExpectedTarget) = DodoVaultV1(lpTokenPool)
+        (uint256 _baseExpectedTarget, uint256 _quoteExpectedTarget) = DodoVaultV1(lpTokenPool)
             .getExpectedTarget();
         _ratios = new uint256[](_assets.length);
-        _ratios[0] = baseExpectedTarget;
-        _ratios[1] = quoteExpectedTarget;
+        _ratios[0] = _baseExpectedTarget;
+        _ratios[1] = _quoteExpectedTarget;
     }
 
-    function getOutputsInfo() external view virtual override returns (OutputInfo[] memory outputsInfo) {
-        outputsInfo = new OutputInfo[](1);
-        OutputInfo memory info0 = outputsInfo[0];
-        info0.outputCode = 0;
-        info0.outputTokens = wants;
+    function getOutputsInfo() external view virtual override returns (OutputInfo[] memory _outputsInfo) {
+        _outputsInfo = new OutputInfo[](1);
+        OutputInfo memory _info0 = _outputsInfo[0];
+        _info0.outputCode = 0;
+        _info0.outputTokens = wants;
     }
 
     function getPositionDetail()
@@ -72,57 +72,57 @@ contract DodoV2Strategy is BaseClaimableStrategy, DodoPoolV2ActionsMixin {
         returns (
             address[] memory _tokens,
             uint256[] memory _amounts,
-            bool isUsd,
-            uint256 usdValue
+            bool _isUsd,
+            uint256 _usdValue
         )
     {
         _tokens = wants;
         _amounts = valueOfLpTokens();
         address _lpTokenPool = lpTokenPool;
-        uint256 basePenalty = DodoVaultV1(_lpTokenPool).getWithdrawBasePenalty(_amounts[0]);
-        uint256 quotePenalty = DodoVaultV1(_lpTokenPool).getWithdrawQuotePenalty(_amounts[1]);
-        _amounts[0] -= basePenalty;
-        _amounts[1] -= quotePenalty;
+        uint256 _basePenalty = DodoVaultV1(_lpTokenPool).getWithdrawBasePenalty(_amounts[0]);
+        uint256 _quotePenalty = DodoVaultV1(_lpTokenPool).getWithdrawQuotePenalty(_amounts[1]);
+        _amounts[0] -= _basePenalty;
+        _amounts[1] -= _quotePenalty;
         _amounts[0] += balanceOfToken(_tokens[0]);
         _amounts[1] += balanceOfToken(_tokens[1]);
     }
 
     function balanceOfLpTokens() private view returns (uint256[] memory) {
-        uint256[] memory lpTokenAmounts = new uint256[](2);
-        lpTokenAmounts[0] = balanceOfBaseLpToken();
-        lpTokenAmounts[1] = balanceOfQuoteLpToken();
-        return lpTokenAmounts;
+        uint256[] memory _lpTokenAmounts = new uint256[](2);
+        _lpTokenAmounts[0] = balanceOfBaseLpToken();
+        _lpTokenAmounts[1] = balanceOfQuoteLpToken();
+        return _lpTokenAmounts;
     }
 
     function valueOfLpTokens() private view returns (uint256[] memory) {
-        uint256[] memory lpTokenAmounts = balanceOfLpTokens();
-        uint256[] memory amounts = new uint256[](2);
+        uint256[] memory _lpTokenAmounts = balanceOfLpTokens();
+        uint256[] memory _amounts = new uint256[](2);
         address _lpTokenPool = lpTokenPool;
-        amounts[0] =
-            (lpTokenAmounts[0] * DodoVaultV1(_lpTokenPool)._TARGET_BASE_TOKEN_AMOUNT_()) /
+        _amounts[0] =
+            (_lpTokenAmounts[0] * DodoVaultV1(_lpTokenPool)._TARGET_BASE_TOKEN_AMOUNT_()) /
             DodoVaultV1(_lpTokenPool).getTotalBaseCapital();
-        amounts[1] =
-            (lpTokenAmounts[1] * DodoVaultV1(_lpTokenPool)._TARGET_QUOTE_TOKEN_AMOUNT_()) /
+        _amounts[1] =
+            (_lpTokenAmounts[1] * DodoVaultV1(_lpTokenPool)._TARGET_QUOTE_TOKEN_AMOUNT_()) /
             DodoVaultV1(_lpTokenPool).getTotalQuoteCapital();
-        return amounts;
+        return _amounts;
     }
 
     function get3rdPoolAssets() external view override returns (uint256) {
         address[] memory _wants = wants;
         address _lpTokenPool = lpTokenPool;
-        uint256 targetPoolTotalAssets;
+        uint256 _targetPoolTotalAssets;
 
-        uint256 baseTokenAmount = DodoVaultV1(_lpTokenPool)._TARGET_BASE_TOKEN_AMOUNT_();
-        if (baseTokenAmount > 0) {
-            targetPoolTotalAssets += queryTokenValue(_wants[0], baseTokenAmount);
+        uint256 _baseTokenAmount = DodoVaultV1(_lpTokenPool)._TARGET_BASE_TOKEN_AMOUNT_();
+        if (_baseTokenAmount > 0) {
+            _targetPoolTotalAssets += queryTokenValue(_wants[0], _baseTokenAmount);
         }
 
-        uint256 quoteTokenAmount = DodoVaultV1(_lpTokenPool)._TARGET_QUOTE_TOKEN_AMOUNT_();
-        if (quoteTokenAmount > 0) {
-            targetPoolTotalAssets += queryTokenValue(_wants[1], quoteTokenAmount);
+        uint256 _quoteTokenAmount = DodoVaultV1(_lpTokenPool)._TARGET_QUOTE_TOKEN_AMOUNT_();
+        if (_quoteTokenAmount > 0) {
+            _targetPoolTotalAssets += queryTokenValue(_wants[1], _quoteTokenAmount);
         }
 
-        return targetPoolTotalAssets;
+        return _targetPoolTotalAssets;
     }
 
     function getPendingRewards()
@@ -161,9 +161,9 @@ contract DodoV2Strategy is BaseClaimableStrategy, DodoPoolV2ActionsMixin {
             _assets.length == wants.length && _assets[0] == wants[0] && _assets[1] == wants[1],
             "need two token."
         );
-        uint8 rStatus = DodoVaultV1(lpTokenPool)._R_STATUS_();
+        uint8 _rStatus = DodoVaultV1(lpTokenPool)._R_STATUS_();
         // Deposit fewer coins first, so that you will get rewards
-        if (rStatus == 2) {
+        if (_rStatus == 2) {
             _depositQuoteToken(_assets[1], _amounts[1]);
             _depositBaseToken(_assets[0], _amounts[0]);
         } else {
@@ -179,11 +179,11 @@ contract DodoV2Strategy is BaseClaimableStrategy, DodoPoolV2ActionsMixin {
             IERC20Upgradeable(_asset).safeApprove(_lpTokenPool, _amount);
             DodoVaultV1(_lpTokenPool).depositBase(_amount);
             address _baseLpToken = baseLpToken;
-            uint256 baseLiquidity = balanceOfToken(_baseLpToken);
+            uint256 _baseLiquidity = balanceOfToken(_baseLpToken);
             address _baseStakePool = baseStakePool;
             IERC20Upgradeable(_baseLpToken).safeApprove(_baseStakePool, 0);
-            IERC20Upgradeable(_baseLpToken).safeApprove(_baseStakePool, baseLiquidity);
-            DodoStakePoolV2(_baseStakePool).deposit(baseLiquidity);
+            IERC20Upgradeable(_baseLpToken).safeApprove(_baseStakePool, _baseLiquidity);
+            DodoStakePoolV2(_baseStakePool).deposit(_baseLiquidity);
         }
     }
 
@@ -194,11 +194,11 @@ contract DodoV2Strategy is BaseClaimableStrategy, DodoPoolV2ActionsMixin {
             IERC20Upgradeable(_asset).safeApprove(_lpTokenPool, _amount);
             DodoVaultV1(_lpTokenPool).depositQuote(_amount);
             address _quoteLpToken = quoteLpToken;
-            uint256 quoteLiquidity = balanceOfToken(_quoteLpToken);
+            uint256 _quoteLiquidity = balanceOfToken(_quoteLpToken);
             address _quoteStakePool = quoteStakePool;
             IERC20Upgradeable(_quoteLpToken).safeApprove(_quoteStakePool, 0);
-            IERC20Upgradeable(_quoteLpToken).safeApprove(_quoteStakePool, quoteLiquidity);
-            DodoStakePoolV2(_quoteStakePool).deposit(quoteLiquidity);
+            IERC20Upgradeable(_quoteLpToken).safeApprove(_quoteStakePool, _quoteLiquidity);
+            DodoStakePoolV2(_quoteStakePool).deposit(_quoteLiquidity);
         }
     }
 
@@ -210,38 +210,38 @@ contract DodoV2Strategy is BaseClaimableStrategy, DodoPoolV2ActionsMixin {
         address _lpTokenPool = lpTokenPool;
         uint256 _baseWithdrawAmount = (balanceOfBaseLpToken() * _withdrawShares) / _totalShares;
         uint256 _quoteWithdrawAmount = (balanceOfQuoteLpToken() * _withdrawShares) / _totalShares;
-        (uint256 baseExpectedTarget, uint256 quoteExpectedTarget) = DodoVaultV1(_lpTokenPool)
+        (uint256 _baseExpectedTarget, uint256 _quoteExpectedTarget) = DodoVaultV1(_lpTokenPool)
             .getExpectedTarget();
-        uint256 totalBaseCapital = DodoVaultV1(_lpTokenPool).getTotalBaseCapital();
-        uint256 totalQuoteCapital = DodoVaultV1(_lpTokenPool).getTotalQuoteCapital();
-        uint8 rStatus = DodoVaultV1(_lpTokenPool)._R_STATUS_();
+        uint256 _totalBaseCapital = DodoVaultV1(_lpTokenPool).getTotalBaseCapital();
+        uint256 _totalQuoteCapital = DodoVaultV1(_lpTokenPool).getTotalQuoteCapital();
+        uint8 _rStatus = DodoVaultV1(_lpTokenPool)._R_STATUS_();
         address _baseStakePool = baseStakePool;
         address _quoteStakePool = quoteStakePool;
 
-        if (rStatus == 2) {
+        if (_rStatus == 2) {
             if (_baseWithdrawAmount > 0) {
                 __withdrawLpToken(_baseStakePool, _baseWithdrawAmount);
                 DodoVaultV1(_lpTokenPool).withdrawBase(
-                    (_baseWithdrawAmount * baseExpectedTarget) / totalBaseCapital
+                    (_baseWithdrawAmount * _baseExpectedTarget) / _totalBaseCapital
                 );
             }
             if (_quoteWithdrawAmount > 0) {
                 __withdrawLpToken(_quoteStakePool, _quoteWithdrawAmount);
                 DodoVaultV1(_lpTokenPool).withdrawQuote(
-                    (_quoteWithdrawAmount * quoteExpectedTarget) / totalQuoteCapital
+                    (_quoteWithdrawAmount * _quoteExpectedTarget) / _totalQuoteCapital
                 );
             }
         } else {
             if (_quoteWithdrawAmount > 0) {
                 __withdrawLpToken(_quoteStakePool, _quoteWithdrawAmount);
                 DodoVaultV1(_lpTokenPool).withdrawQuote(
-                    (_quoteWithdrawAmount * quoteExpectedTarget) / totalQuoteCapital
+                    (_quoteWithdrawAmount * _quoteExpectedTarget) / _totalQuoteCapital
                 );
             }
             if (_baseWithdrawAmount > 0) {
                 __withdrawLpToken(_baseStakePool, _baseWithdrawAmount);
                 DodoVaultV1(_lpTokenPool).withdrawBase(
-                    (_baseWithdrawAmount * baseExpectedTarget) / totalBaseCapital
+                    (_baseWithdrawAmount * _baseExpectedTarget) / _totalBaseCapital
                 );
             }
         }
