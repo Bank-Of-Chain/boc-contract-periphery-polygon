@@ -138,6 +138,9 @@ contract SushiSwapStrategy is BaseClaimableStrategy, UniswapV2LiquidityActionsMi
             return;
         }
 
+        // harvest reward token before deposit 
+        harvest();
+
         uint256 _lpAmount = __uniswapV2Lend(
             address(this),
             _assets[0],
@@ -165,5 +168,21 @@ contract SushiSwapStrategy is BaseClaimableStrategy, UniswapV2LiquidityActionsMi
 
             __uniswapV2Redeem(address(this), pair, _lpAmount, wants[0], wants[1], 0, 0);
         }
+    }
+
+    /// @notice Strategy repay the funds to vault
+    /// @param _repayShares Numerator
+    /// @param _totalShares Denominator
+    function repay(uint256 _repayShares, uint256 _totalShares,uint256 _outputCode)
+        public
+        virtual
+        override
+        onlyVault
+        returns (address[] memory _assets, uint256[] memory _amounts)
+    {
+        // first harvest, then withdraw
+        harvest();
+        
+        return BaseStrategy.repay(_repayShares, _totalShares,_outputCode);
     }
 }

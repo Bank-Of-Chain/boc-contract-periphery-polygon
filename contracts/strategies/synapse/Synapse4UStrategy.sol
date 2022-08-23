@@ -129,6 +129,8 @@ contract Synapse4UStrategy is BaseClaimableStrategy {
     }
 
     function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts) internal override {
+        // harvest reward token before deposit 
+        harvest();
         //add underlying token liquidity to swap pool,and get lp token from swap pool
         uint256[] memory _fullAmounts = new uint256[](4);
         for (uint256 i = 0; i < _assets.length; i++) {
@@ -176,5 +178,21 @@ contract Synapse4UStrategy is BaseClaimableStrategy {
         IERC20Upgradeable(LP_TOKEN).safeApprove(address(SWAP_POOL), 0);
         IERC20Upgradeable(LP_TOKEN).safeApprove(address(SWAP_POOL), _actualLpTokenAmount);
         SWAP_POOL.removeLiquidityOneToken(_actualLpTokenAmount, _outputIndex, 0, block.timestamp);
+    }
+
+    /// @notice Strategy repay the funds to vault
+    /// @param _repayShares Numerator
+    /// @param _totalShares Denominator
+    function repay(uint256 _repayShares, uint256 _totalShares,uint256 _outputCode)
+        public
+        virtual
+        override
+        onlyVault
+        returns (address[] memory _assets, uint256[] memory _amounts)
+    {
+        // first harvest, then withdraw
+        harvest();
+        
+        return BaseStrategy.repay(_repayShares, _totalShares,_outputCode);
     }
 }
