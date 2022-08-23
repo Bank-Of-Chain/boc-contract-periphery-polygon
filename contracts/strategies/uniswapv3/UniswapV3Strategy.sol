@@ -14,9 +14,8 @@ import "./../../external/uniswapv3/INonfungiblePositionManager.sol";
 import "./../../external/uniswapv3/libraries/LiquidityAmounts.sol";
 import "../../utils/actions/UniswapV3LiquidityActionsMixin.sol";
 import "./../../enums/ProtocolEnum.sol";
-import "hardhat/console.sol";
 
-contract UniswapV3Strategy is BaseClaimableStrategy, UniswapV3LiquidityActionsMixin {
+contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     event UniV3SetBaseThreshold(int24 _baseThreshold);
@@ -181,30 +180,46 @@ contract UniswapV3Strategy is BaseClaimableStrategy, UniswapV3LiquidityActionsMi
         _totalAssets += queryTokenValue(token1, IERC20Minimal(token1).balanceOf(_pool));
     }
 
-    function claimRewards()
-        internal
+    function harvest()
+        public
         override
-        returns (address[] memory _rewardTokens, uint256[] memory _claimAmounts)
+        returns (address[] memory _rewardsTokens, uint256[] memory _claimAmounts)
     {
+        _rewardsTokens = wants;
+        _claimAmounts = new uint256[](2);
         if (baseMintInfo.tokenId > 0) {
-            __collectAll(baseMintInfo.tokenId);
+            (uint256 _amount0, uint256 _amount1) = __collectAll(baseMintInfo.tokenId);
+            _claimAmounts[0] += _amount0;
+            _claimAmounts[1] += _amount1;
         }
 
         if (limitMintInfo.tokenId > 0) {
-            __collectAll(limitMintInfo.tokenId);
+            (uint256 _amount0, uint256 _amount1) = __collectAll(limitMintInfo.tokenId);
+            _claimAmounts[0] += _amount0;
+            _claimAmounts[1] += _amount1;
         }
+
+        vault.report(_rewardsTokens, _claimAmounts);
     }
 
     function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts) internal override {
         (, int24 _tick, , , , , ) = pool.slot0();
         if (baseMintInfo.tokenId == 0) {
-            (, , int24 _tickLower, int24 _tickUpper) = getSpecifiedRangesOfTick(_tick);
-            mintNewPosition(_tickLower, _tickUpper, balanceOfToken(token0), balanceOfToken(token1), true);
+            (,, int24 _tickLower, int24 _tickUpper) = getSpecifiedRangesOfTick(_tick);
+            mintNewPosition(
+                _tickLower,
+                _tickUpper,
+                balanceOfToken(token0),
+                balanceOfToken(token1),
+                true
+            );
+            lastTimestamp = block.timestamp;
+            lastTick = _tick;
         } else {
             if (shouldRebalance(_tick)) {
                 rebalance(_tick);
             } else {
-                //add liquidity
+                //add _liquidity
                 INonfungiblePositionManager.IncreaseLiquidityParams
                     memory _params = INonfungiblePositionManager.IncreaseLiquidityParams({
                         tokenId: baseMintInfo.tokenId,
@@ -224,8 +239,15 @@ contract UniswapV3Strategy is BaseClaimableStrategy, UniswapV3LiquidityActionsMi
         uint256 _totalShares,
         uint256 _outputCode
     ) internal override {
+        if (_withdrawShares == _totalShares) {
+            harvest();
+        }
         withdraw(baseMintInfo.tokenId, _withdrawShares, _totalShares);
         withdraw(limitMintInfo.tokenId, _withdrawShares, _totalShares);
+        if (_withdrawShares == _totalShares) {
+            baseMintInfo = MintInfo({tokenId: 0, tickLower: 0, tickUpper: 0});
+            limitMintInfo = MintInfo({tokenId: 0, tickLower: 0, tickUpper: 0});
+        }
     }
 
     function withdraw(
@@ -236,7 +258,10 @@ contract UniswapV3Strategy is BaseClaimableStrategy, UniswapV3LiquidityActionsMi
         uint128 _withdrawLiquidity = uint128(
             (balanceOfLpToken(_tokenId) * _withdrawShares) / _totalShares
         );
-        if (_withdrawLiquidity > 0) {
+        if (_withdrawLiquidity <= 0) return;
+        if (_withdrawShares == _totalShares) {
+            __purge(_tokenId, type(uint128).max, 0, 0);
+        } else {
             removeLiquidity(_tokenId, _withdrawLiquidity);
         }
     }
@@ -266,18 +291,21 @@ contract UniswapV3Strategy is BaseClaimableStrategy, UniswapV3LiquidityActionsMi
     }
 
     function rebalance(int24 _tick) internal {
-        // Withdraw all current liquidity
+        harvest();
+        // Withdraw all current _liquidity
         uint128 _baseLiquidity = balanceOfLpToken(baseMintInfo.tokenId);
         if (_baseLiquidity > 0) {
-            removeLiquidity(baseMintInfo.tokenId, _baseLiquidity);
-            __collectAll(baseMintInfo.tokenId);
+            __purge(baseMintInfo.tokenId, type(uint128).max, 0, 0);
+            baseMintInfo = MintInfo({tokenId: 0, tickLower: 0, tickUpper: 0});
         }
 
         uint128 _limitLiquidity = balanceOfLpToken(limitMintInfo.tokenId);
         if (_limitLiquidity > 0) {
-            removeLiquidity(limitMintInfo.tokenId, _limitLiquidity);
-            __collectAll(limitMintInfo.tokenId);
+            __purge(limitMintInfo.tokenId, type(uint128).max, 0, 0);
+            limitMintInfo = MintInfo({tokenId: 0, tickLower: 0, tickUpper: 0});
         }
+
+        if (_baseLiquidity <= 0 && _limitLiquidity <= 0) return;
 
         // Mint new base and limit position
         (int24 _tickFloor, int24 _tickCeil, int24 _tickLower, int24 _tickUpper) = getSpecifiedRangesOfTick(
@@ -285,11 +313,18 @@ contract UniswapV3Strategy is BaseClaimableStrategy, UniswapV3LiquidityActionsMi
         );
         uint256 _balance0 = balanceOfToken(token0);
         uint256 _balance1 = balanceOfToken(token1);
+        if (_balance0 > 0 && _balance1 > 0) {
+            mintNewPosition(
+                _tickLower,
+                _tickUpper,
+                _balance0,
+                _balance1,
+                true
+            );
+            _balance0 = balanceOfToken(token0);
+            _balance1 = balanceOfToken(token1);
+        }
 
-        mintNewPosition(_tickLower, _tickUpper, _balance0, _balance1, true);
-
-        _balance0 = balanceOfToken(token0);
-        _balance1 = balanceOfToken(token1);
         if (_balance0 > 0 || _balance1 > 0) {
             // Place bid or ask order on Uniswap depending on which token is left
             if (
@@ -332,6 +367,11 @@ contract UniswapV3Strategy is BaseClaimableStrategy, UniswapV3LiquidityActionsMi
             return false;
         }
 
+        (, , int24 _tickLower, int24 _tickUpper) = getSpecifiedRangesOfTick(_tick);
+        if (baseMintInfo.tokenId != 0 && _tickLower == baseMintInfo.tickLower && _tickUpper == baseMintInfo.tickUpper) {
+            return false;
+        }
+
         return true;
     }
 
@@ -364,7 +404,6 @@ contract UniswapV3Strategy is BaseClaimableStrategy, UniswapV3LiquidityActionsMi
 
     // Rounds _tick down towards negative infinity so that it's a multiple of `tickSpacing`.
     function _floor(int24 _tick) internal view returns (int24) {
-        // _compressed=-27633, _tick=-276330, tickSpacing=10
         int24 _compressed = _tick / tickSpacing;
         if (_tick < 0 && _tick % tickSpacing != 0) _compressed--;
         return _compressed * tickSpacing;
