@@ -163,7 +163,7 @@ contract Synapse4UStrategy is BaseClaimableStrategy {
         uint256 _lpAmountToWithdraw = (_withdrawShares * _lpAmountStakeInChef) / _totalShares;
         MINICHEF.withdraw(POOL_ID, _lpAmountToWithdraw, address(this));
 
-        uint8 _outputIndex = 3;
+        uint8 _outputIndex = 1;
         if (_outputCode == 0) {
             _outputIndex = 1;
         } else if (_outputCode == 1) {
