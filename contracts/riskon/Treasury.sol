@@ -65,18 +65,13 @@ contract Treasury is
         return 'V1.0.0';
     }
 
-    /// @notice Return the '_token' balance of this contract.
-    /// @param _token The token queryed
-    /// @return The `_token` balance of this contract
+    /// @inheritdoc ITreasury
     function balance(address _token) public view override returns (uint256) {
         return IERC20Upgradeable(_token).balanceOf(address(this));
     }
 
-    /// @notice Withdraw '_amount' '_token' from this contract to '_receiver'
-    /// @param _token The token to withdraw
-    /// @param _receiver The receiver address to withdraw
-    /// @param _amount The amount of token to withdraw
     /// Requirements: only keeper role can call
+    /// @inheritdoc ITreasury
     function withdrawToken(
         address _token,
         address _receiver,
@@ -86,10 +81,8 @@ contract Treasury is
         IERC20Upgradeable(_token).safeTransfer(_receiver, _amount);
     }
 
-    /// @notice Withdraw ETH from this contract to '_receiver'
-    /// @param _receiver The receiver address to withdraw
-    /// @param _amount The amount of ETH to withdraw
     /// Requirements: only keeper role can call
+    /// @inheritdoc ITreasury
     function withdrawETH(address payable _receiver, uint256 _amount)
         external
         payable
@@ -101,9 +94,7 @@ contract Treasury is
         _receiver.transfer(_amount);
     }
     
-    /// @notice Receive profits from a vault
-    /// @param _token The profit token
-    /// @param _profitAmount The profit amount
+    /// @inheritdoc ITreasury
     function receiveProfitFromVault(address _token, uint256 _profitAmount) external override {
         require(isReceivableToken[_token],'Not receivable token');
         if(takeProfitFlag) {
@@ -113,9 +104,8 @@ contract Treasury is
         }
     }
 
-    /// @notice Sets the flag of taking profit
-    /// @param _newFlag The new flag
     /// Requirements: only governance role can call
+    /// @inheritdoc ITreasury
     function setTakeProfitFlag (bool _newFlag) external override onlyRole(BocRoles.GOV_ROLE){
         takeProfitFlag = _newFlag;
         emit TakeProfitFlagChanged(_newFlag);

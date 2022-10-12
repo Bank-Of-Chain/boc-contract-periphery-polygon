@@ -14,13 +14,14 @@ import 'boc-contract-core/contracts/library/BocRoles.sol';
 interface ITreasury {
 
     /// @notice Return the '_token' balance of this contract.
+    /// @param _token The token queryed
+    /// @return The `_token` balance of this contract
     function balance(address _token) external view returns (uint256);
 
     /// @notice Withdraw '_amount' '_token' from this contract to '_receiver'
     /// @param _token The token to withdraw
-    /// @param _receiver The receiver address to withdraw`
+    /// @param _receiver The receiver address to withdraw
     /// @param _amount The amount of token to withdraw
-    /// Requirements: only governance role can call
     function withdrawToken(
         address _token,
         address _receiver,
@@ -30,13 +31,15 @@ interface ITreasury {
     /// @notice Withdraw ETH from this contract to '_receiver'
     /// @param _receiver The receiver address to withdraw
     /// @param _amount The amount of ETH to withdraw
-    /// Requirements: only governance role can call
     function withdrawETH(address payable _receiver, uint256 _amount) external payable;
 
-    /// @notice take 20% profit
+    /// @notice Receive profits from a vault
+    /// @param _token The profit token
+    /// @param _profitAmount The profit amount
     function receiveProfitFromVault(address _token, uint256 _profitAmount) external;
 
-    /// @notice Sets 'takeProfitFlag'
+    /// @notice Sets the flag of taking profit
+    /// @param _newFlag The new flag
     function setTakeProfitFlag (bool _newFlag) external;
 
 }
