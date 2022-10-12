@@ -25,7 +25,6 @@ contract VaultFactory is AccessControlMixin, ReentrancyGuardUpgradeable{
     // user1 => UniswapV3UsdcWeth500RiskOnVault（基础合约地址） => VaultList[2] == [wethVault,usdcVault]
     mapping(address => mapping(address => address[2])) public vaultAddressMap;
 
-    /// @notice Create New Vault Event
     /// @param _owner The owner of new vault
     /// @param _newVault The new vault created
     /// @param _wantToken The token wanted by this new  vault

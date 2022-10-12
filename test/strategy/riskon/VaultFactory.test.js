@@ -3,10 +3,6 @@ const { default: BigNumber } = require('bignumber.js');
 const { ethers } = require('hardhat');
 const { assert, expect } = require('chai');
 
-// const ERC20 = hre.artifacts.require('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20');
-// const VaultFactory = hre.artifacts.require('VaultFactory.sol');
-// const UniswapV3RiskOnVaultInitialize = hre.artifacts.require('UniswapV3RiskOnVaultInitialize.sol');
-
 const WETH_ADDRESS = '0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619';
 const USDC_ADDRESS = '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174';
 
