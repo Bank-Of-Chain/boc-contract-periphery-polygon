@@ -145,16 +145,15 @@ abstract contract UniswapV3BaseStrategy is BaseClaimableStrategy, UniswapV3Liqui
             if (shouldRebalance(tick)) {
                 rebalance(tick);
             } else {
-                //添加流动性
-                INonfungiblePositionManager.IncreaseLiquidityParams memory params = INonfungiblePositionManager.IncreaseLiquidityParams({
+                //add liquidity
+                nonfungiblePositionManager.increaseLiquidity(INonfungiblePositionManager.IncreaseLiquidityParams({
                 tokenId : baseMintInfo.tokenId,
                 amount0Desired : balanceOfToken(token0),
                 amount1Desired : balanceOfToken(token1),
                 amount0Min : 0,
                 amount1Min : 0,
                 deadline : block.timestamp
-                });
-                __addLiquidity(params);
+                }));
             }
         }
     }
@@ -173,14 +172,16 @@ abstract contract UniswapV3BaseStrategy is BaseClaimableStrategy, UniswapV3Liqui
 
     function removeLiquidity(uint256 _tokenId, uint128 _liquidity) internal {
         // remove liquidity
-        INonfungiblePositionManager.DecreaseLiquidityParams memory params = INonfungiblePositionManager.DecreaseLiquidityParams({
+        (uint256 _amount0, uint256 _amount1) = nonfungiblePositionManager.decreaseLiquidity(INonfungiblePositionManager.DecreaseLiquidityParams({
         tokenId : _tokenId,
         liquidity : _liquidity,
         amount0Min : 0,
         amount1Min : 0,
         deadline : block.timestamp
-        });
-        __removeLiquidity(params);
+        }));
+        if (_amount0 > 0 || _amount1 > 0) {
+            __collect(_tokenId, uint128(_amount0), uint128(_amount1));
+        }
     }
 
     function balanceOfLpToken(uint256 _tokenId) public view returns (uint128) {

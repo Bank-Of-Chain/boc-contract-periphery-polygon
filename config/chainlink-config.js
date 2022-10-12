@@ -28,6 +28,12 @@ const getChainlinkConfig = () => {
             },
         },
         aggregators: {
+            WETH_USD: {
+                primitive: WETH_ADDRESS,
+                aggregator: '0xF9680D99D6C9589e2a93a78A04A279e509205945',
+                rateAsset: CHAINLINK_RATE_ASSETS.USD,
+                heartbeat: 1 * 60 * 60
+            },
             DAI_USD: {
                 primitive: DAI_ADDRESS,
                 aggregator: '0x4746DeC9e833A82EC7C2C1356372CcF2cfcD2F3D',
