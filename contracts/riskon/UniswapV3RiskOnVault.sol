@@ -255,7 +255,24 @@ abstract contract UniswapV3RiskOnVault is Initializable, IUniswapV3RiskOnVault, 
         emit LendToStrategy(_amount);
     }
 
-    function redeem(uint256 _redeemShares, uint256 _totalShares) external isOwner whenNotEmergency nonReentrant override {
+    function redeem(uint256 _redeemShares, uint256 _totalShares) external isOwner override returns (uint256 _redeemBalance) {
+        _redeemBalance = redeemToVault(_redeemShares, _totalShares);
+        console.log('----------------redeem redeemBalance: %d, netMarketMakingAmount: %d', _redeemBalance, netMarketMakingAmount);
+        if (_redeemBalance > netMarketMakingAmount) {
+            netMarketMakingAmount = 0;
+        } else {
+            netMarketMakingAmount -= _redeemBalance;
+        }
+        IERC20Upgradeable(wantToken).safeTransfer(msg.sender, _redeemBalance);
+        emit Redeem(_redeemBalance);
+    }
+
+    function redeemToVaultByKeeper(uint256 _redeemShares, uint256 _totalShares) external isKeeper override returns (uint256 _redeemBalance) {
+        _redeemBalance = redeemToVault(_redeemShares, _totalShares);
+        emit RedeemToVault(_redeemBalance);
+    }
+
+    function redeemToVault(uint256 _redeemShares, uint256 _totalShares) internal whenNotEmergency nonReentrant returns (uint256 _redeemBalance) {
         uint256 currentBorrow = uniswapV3RiskOnHelper.getCurrentBorrow(borrowToken, interestRateMode, address(this));
         (uint256 _totalCollateral, , , , ,) = uniswapV3RiskOnHelper.borrowInfo(address(this));
         if (_redeemShares == _totalShares) {
@@ -300,15 +317,7 @@ abstract contract UniswapV3RiskOnVault is Initializable, IUniswapV3RiskOnVault, 
             IERC20Upgradeable(borrowToken).safeApprove(RiskOnConstant.UNISWAP_V3_ROUTER, borrowTokenBalance);
             IUniswapV3(RiskOnConstant.UNISWAP_V3_ROUTER).exactInputSingle(IUniswapV3.ExactInputSingleParams(borrowToken, wantToken, fee, address(this), block.timestamp, borrowTokenBalance, 0, 0));
         }
-        uint256 redeemBalance = balanceOfToken(wantToken);
-        console.log('----------------redeem redeemBalance: %d, netMarketMakingAmount: %d', redeemBalance, netMarketMakingAmount);
-        if (redeemBalance > netMarketMakingAmount) {
-            netMarketMakingAmount = 0;
-        } else {
-            netMarketMakingAmount -= redeemBalance;
-        }
-        IERC20Upgradeable(wantToken).safeTransfer(msg.sender, redeemBalance);
-        emit Redeem(redeemBalance);
+        _redeemBalance = balanceOfToken(wantToken);
     }
 
     /// @notice Remove partial liquidity of `_tokenId`
