@@ -26,6 +26,9 @@ interface IUniswapV3RiskOnVault {
     /// @param _redeemAmount The amount of redeem
     event Redeem(uint256 _redeemAmount);
 
+    /// @param _redeemAmount The amount of redeem
+    event RedeemToVault(uint256 _redeemAmount);
+
     /// @notice Version of strategy
     function getVersion() external pure returns (string memory);
 
@@ -48,7 +51,10 @@ interface IUniswapV3RiskOnVault {
     function lend(uint256 _amount) external;
 
     /// @notice Withdraw the funds from specified strategy.
-    function redeem(uint256 _redeemShares, uint256 _totalShares) external;
+    function redeem(uint256 _redeemShares, uint256 _totalShares) external returns (uint256 _redeemBalance);
+
+    /// @notice Withdraw the funds from specified strategy.
+    function redeemToVaultByKeeper(uint256 _redeemShares, uint256 _totalShares) external returns (uint256 _redeemBalance);
 
     /// @notice Borrow Rebalance.
     function borrowRebalance() external;

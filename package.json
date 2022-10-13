@@ -60,6 +60,7 @@
     "deploy_v1.5.4": "yarn topup && npm run grant && hardhat run scripts/deploy_v1.5.4.js --network localhost",
     "migrate-usdi-to-pegtoken": "yarn topup && yarn grant && yarn update-aggregator && hardhat run scripts/migrate-usdi-to-pegtoken.js --network localhost",
     "deploy_v1.5.9": "yarn topup && yarn grant && yarn update-aggregator && hardhat run scripts/deploy_v1.5.9.js --network localhost",
+    "deploy_risk_on": "yarn topup && hardhat run scripts/deploy-risk-on.js --network localhost",
     "lend": "hardhat run scripts/simple-lend.js --network localhost",
     "lint:sol": "solhint --config ./.solhint.json --max-warnings 0 \"contracts/**/*.sol\"",
     "release": "hardhat run scripts/deploy.js --network mainnet",

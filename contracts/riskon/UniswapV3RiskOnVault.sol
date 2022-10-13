@@ -160,16 +160,16 @@ abstract contract UniswapV3RiskOnVault is Initializable, IUniswapV3RiskOnVault, 
         amount1 += _amount1;
         (uint256 _totalCollateral, uint256 _totalDebt, , , ,) = uniswapV3RiskOnHelper.borrowInfo(address(this));
         console.log('----------------estimatedTotalAssets amount0: %d, amount1: %d', amount0, amount1);
-        console.log('----------------estimatedTotalAssets _totalCollateral: %d, _totalDebt: %d', _totalCollateral, _totalDebt);
+        console.log('----------------estimatedTotalAssets _totalCollateral: %d, _totalDebt: %d', _totalCollateral.mul(1e8), _totalDebt);
         if (wantToken == token0) {
-            amount0 += valueInterpreter.calcCanonicalAssetValue(RiskOnConstant.WMATIC, _totalCollateral, token0);
+            amount0 += valueInterpreter.calcCanonicalAssetValue(RiskOnConstant.WETH, _totalCollateral.mul(1e8), token0);
             console.log('----------------estimatedTotalAssets wantToken == token0 amount0: %d, amount1: %d', amount0, amount1);
-            console.log('----------------estimatedTotalAssets wantToken == token0 _totalCollateral: %d, valueInterpreter.calcCanonicalAssetValue(RiskOnConstant.WMATIC, _totalCollateral, token0): %d', _totalCollateral, valueInterpreter.calcCanonicalAssetValue(RiskOnConstant.WMATIC, _totalCollateral, token0));
-            console.log('----------------estimatedTotalAssets wantToken == token0 getCurrentBorrow(): %d, valueInterpreter.calcCanonicalAssetValue(token1, amount1, token0): %d', getCurrentBorrow(), valueInterpreter.calcCanonicalAssetValue(token1, amount1, token0));
-            _totalAssets = amount0 + valueInterpreter.calcCanonicalAssetValue(token1, amount1, token0) + valueInterpreter.calcCanonicalAssetValue(RiskOnConstant.WMATIC, _totalCollateral, token0) - valueInterpreter.calcCanonicalAssetValue(RiskOnConstant.WMATIC, getCurrentBorrow(), token0);
+            console.log('----------------estimatedTotalAssets wantToken == token0 _totalCollateral: %d, valueInterpreter.calcCanonicalAssetValue(RiskOnConstant.WETH, _totalCollateral, token0): %d', _totalCollateral.mul(1e8), valueInterpreter.calcCanonicalAssetValue(RiskOnConstant.WETH, _totalCollateral.mul(1e8), token0));
+            console.log('----------------estimatedTotalAssets wantToken == token0 getCurrentBorrow(): %d, valueInterpreter.calcCanonicalAssetValue(token1, amount1, token0): %d', uniswapV3RiskOnHelper.getCurrentBorrow(borrowToken, interestRateMode, address(this)), valueInterpreter.calcCanonicalAssetValue(token1, amount1, token0));
+            _totalAssets = amount0 + valueInterpreter.calcCanonicalAssetValue(token1, amount1, token0) - valueInterpreter.calcCanonicalAssetValue(token1, uniswapV3RiskOnHelper.getCurrentBorrow(borrowToken, interestRateMode, address(this)), token0);
         } else {
-            amount1 += valueInterpreter.calcCanonicalAssetValue(RiskOnConstant.WMATIC, _totalCollateral, token1);
-            _totalAssets = amount1 + valueInterpreter.calcCanonicalAssetValue(token0, amount0, token1) + valueInterpreter.calcCanonicalAssetValue(RiskOnConstant.WMATIC, _totalCollateral, token0) - valueInterpreter.calcCanonicalAssetValue(RiskOnConstant.WMATIC, getCurrentBorrow(), token1);
+            amount1 += valueInterpreter.calcCanonicalAssetValue(RiskOnConstant.WETH, _totalCollateral.mul(1e8), token1);
+            _totalAssets = amount1 + valueInterpreter.calcCanonicalAssetValue(token0, amount0, token1) - valueInterpreter.calcCanonicalAssetValue(token0, uniswapV3RiskOnHelper.getCurrentBorrow(borrowToken, interestRateMode, address(this)), token1);
         }
     }
 
@@ -255,21 +255,43 @@ abstract contract UniswapV3RiskOnVault is Initializable, IUniswapV3RiskOnVault, 
         emit LendToStrategy(_amount);
     }
 
-    function redeem(uint256 _redeemShares, uint256 _totalShares) external isOwner whenNotEmergency nonReentrant override {
+    function redeem(uint256 _redeemShares, uint256 _totalShares) external isOwner override returns (uint256 _redeemBalance) {
+        _redeemBalance = redeemToVault(_redeemShares, _totalShares);
+        console.log('----------------redeem redeemBalance: %d, netMarketMakingAmount: %d', _redeemBalance, netMarketMakingAmount);
+        if (_redeemBalance > netMarketMakingAmount) {
+            netMarketMakingAmount = 0;
+        } else {
+            netMarketMakingAmount -= _redeemBalance;
+        }
+        IERC20Upgradeable(wantToken).safeTransfer(msg.sender, _redeemBalance);
+        emit Redeem(_redeemBalance);
+    }
+
+    function redeemToVaultByKeeper(uint256 _redeemShares, uint256 _totalShares) external isKeeper override returns (uint256 _redeemBalance) {
+        _redeemBalance = redeemToVault(_redeemShares, _totalShares);
+        emit RedeemToVault(_redeemBalance);
+    }
+
+    function redeemToVault(uint256 _redeemShares, uint256 _totalShares) internal whenNotEmergency nonReentrant returns (uint256 _redeemBalance) {
         uint256 currentBorrow = uniswapV3RiskOnHelper.getCurrentBorrow(borrowToken, interestRateMode, address(this));
         (uint256 _totalCollateral, , , , ,) = uniswapV3RiskOnHelper.borrowInfo(address(this));
         if (_redeemShares == _totalShares) {
-            delete baseMintInfo;
-            delete limitMintInfo;
             withdraw(baseMintInfo.tokenId, _redeemShares, _totalShares);
             withdraw(limitMintInfo.tokenId, _redeemShares, _totalShares);
+            delete baseMintInfo;
+            delete limitMintInfo;
             uint256 borrowTokenBalance = balanceOfToken(borrowToken);
             if (currentBorrow > borrowTokenBalance) {
+                console.log('----------------redeem balanceOfToken(wantToken): %d', balanceOfToken(wantToken));
+                console.log('----------------redeem currentBorrow: %d, borrowTokenBalance: %d', currentBorrow, borrowTokenBalance);
                 IERC20Upgradeable(wantToken).safeApprove(RiskOnConstant.UNISWAP_V3_ROUTER, 0);
                 IERC20Upgradeable(wantToken).safeApprove(RiskOnConstant.UNISWAP_V3_ROUTER, balanceOfToken(wantToken));
                 IUniswapV3(RiskOnConstant.UNISWAP_V3_ROUTER).exactOutputSingle(IUniswapV3.ExactOutputSingleParams(wantToken, borrowToken, fee, address(this), block.timestamp, currentBorrow - borrowTokenBalance, type(uint256).max, 0));
             }
+            console.log('----------------redeem currentBorrow: %d, balanceOfToken(borrowToken): %d', currentBorrow, balanceOfToken(borrowToken));
             __repay(currentBorrow);
+            (uint256 _totalCollateral, uint256 _totalDebt, , , ,) = uniswapV3RiskOnHelper.borrowInfo(address(this));
+            console.log('----------------redeem _totalCollateral: %d, _totalDebt: %d', _totalCollateral, _totalDebt);
             __removeCollateral(uniswapV3RiskOnHelper.getAToken(collateralToken), _totalCollateral);
         } else {
             uint256 beforeWantTokenBalance = balanceOfToken(wantToken);
@@ -295,10 +317,7 @@ abstract contract UniswapV3RiskOnVault is Initializable, IUniswapV3RiskOnVault, 
             IERC20Upgradeable(borrowToken).safeApprove(RiskOnConstant.UNISWAP_V3_ROUTER, borrowTokenBalance);
             IUniswapV3(RiskOnConstant.UNISWAP_V3_ROUTER).exactInputSingle(IUniswapV3.ExactInputSingleParams(borrowToken, wantToken, fee, address(this), block.timestamp, borrowTokenBalance, 0, 0));
         }
-        uint256 redeemBalance = balanceOfToken(wantToken);
-        netMarketMakingAmount -= redeemBalance;
-        IERC20Upgradeable(wantToken).safeTransfer(msg.sender, redeemBalance);
-        emit Redeem(redeemBalance);
+        _redeemBalance = balanceOfToken(wantToken);
     }
 
     /// @notice Remove partial liquidity of `_tokenId`
