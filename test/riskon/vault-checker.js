@@ -153,33 +153,31 @@ async function check(vaultName, callback, exchangeRewardTokenCallback, uniswapV3
 
     let pendingRewards;
     let produceReward = false;
-    // it('[totalAssets should increase after 3 days]', async function () {
-    //     const beforeTotalAssets = new BigNumber(await uniswapV3UsdcWeth500RiskOnVault.estimatedTotalAssets());
-    //     if (callback) {
-    //         await callback(uniswapV3UsdcWeth500RiskOnVault.address, keeper);
-    //     }
-    //     await advanceBlock(3);
-    //     pendingRewards = await uniswapV3UsdcWeth500RiskOnVault.harvest.call({from: keeper});
-    //     await uniswapV3UsdcWeth500RiskOnVault.harvest({from: keeper});
-    //     const rewardsTokens = pendingRewards._rewardsTokens;
-    //     for (let i = 0; i < rewardsTokens.length; i++) {
-    //         const rewardToken = rewardsTokens[i];
-    //         let rewardTokenContract = await ERC20.at(rewardToken);
-    //         let rewardTokenBalance = await rewardTokenContract.balanceOf(harvester);
-    //         if (rewardTokenBalance > 0) {
-    //             produceReward = true;
-    //         }
-    //     }
-    //     const afterTotalAssets = new BigNumber(await uniswapV3UsdcWeth500RiskOnVault.estimatedTotalAssets());
-    //     console.log('beforeTotalAssets: %s, afterTotalAssets: %s, produceReward: %s', beforeTotalAssets.toFixed(), afterTotalAssets.toFixed(), produceReward);
-    //     assert(afterTotalAssets.isGreaterThan(beforeTotalAssets) || produceReward, 'there is no profit after 3 days');
-    // });
-    //
-    // if (uniswapV3RebalanceCallback) {
-    //     it('[UniswapV3 rebalance]', async function () {
-    //         await uniswapV3RebalanceCallback(uniswapV3UsdcWeth500RiskOnVault.address);
-    //     });
-    // }
+    it('[totalAssets should increase after 3 days]', async function () {
+        const beforeTotalAssets = new BigNumber(await uniswapV3UsdcWeth500RiskOnVault.estimatedTotalAssets());
+        if (callback) {
+            await callback(uniswapV3UsdcWeth500RiskOnVault.address, keeper);
+        }
+        await advanceBlock(3);
+        pendingRewards = await uniswapV3UsdcWeth500RiskOnVault.harvest.call({from: keeper});
+        await uniswapV3UsdcWeth500RiskOnVault.harvest({from: keeper});
+        const claimAmounts = pendingRewards._claimAmounts;
+        for (let i = 0; i < claimAmounts.length; i++) {
+            const claimAmount = claimAmounts[i];
+            if (claimAmount > 0) {
+                produceReward = true;
+            }
+        }
+        const afterTotalAssets = new BigNumber(await uniswapV3UsdcWeth500RiskOnVault.estimatedTotalAssets());
+        console.log('beforeTotalAssets: %s, afterTotalAssets: %s, produceReward: %s', beforeTotalAssets.toFixed(), afterTotalAssets.toFixed(), produceReward);
+        assert(afterTotalAssets.isGreaterThan(beforeTotalAssets) || produceReward, 'there is no profit after 3 days');
+    });
+
+    if (uniswapV3RebalanceCallback) {
+        it('[UniswapV3 rebalance]', async function () {
+            await uniswapV3RebalanceCallback(uniswapV3UsdcWeth500RiskOnVault.address);
+        });
+    }
 
     it('[estimatedTotalAssets should be 0 after withdraw all assets]', async function () {
         const estimatedTotalAssetsBefore = new BigNumber(await uniswapV3UsdcWeth500RiskOnVault.estimatedTotalAssets());

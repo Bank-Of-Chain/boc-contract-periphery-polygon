@@ -26,33 +26,20 @@ import "./IUniswapV3RiskOnVault.sol";
 
 /// @title UniswapV3RiskOnVault
 /// @author Bank of Chain Protocol Inc
-abstract contract UniswapV3RiskOnVault is Initializable, IUniswapV3RiskOnVault, UniswapV3LiquidityActionsMixin, AaveLendActionMixin, AccessControlMixin, ReentrancyGuardUpgradeable {
+abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3LiquidityActionsMixin, AaveLendActionMixin, AccessControlMixin, Initializable, ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMath for uint256;
 
-    //    event UniV3UpdateConfig();
-    //
-    //    /// @param _shutdown The new boolean value of the emergency shutdown switch
-    //    event SetEmergencyShutdown(bool _shutdown);
-    //
-    //    /// @param _rewardTokens The reward tokens
-    //    /// @param _claimAmounts The claim amounts
-    //    event StrategyReported(address[] _rewardTokens, uint256[] _claimAmounts);
-    //
-    //    /// @param _amount The amount list of token wanted
-    //    event LendToStrategy(uint256 _amount);
-    //
-    //    /// @param _redeemAmount The amount of redeem
-    //    event Redeem(uint256 _redeemAmount);
-
     /// @notice  emergency shutdown
-    bool public emergencyShutdown;
+    bool public override emergencyShutdown;
 
     /// @notice  net market making amount
-    uint256 public netMarketMakingAmount;
+    uint256 public override netMarketMakingAmount;
+
+    /// @notice  name
+    string public override name;
 
     address internal owner;
-    string public override name;
     address public wantToken;
     int24 internal baseThreshold;
     int24 internal limitThreshold;
@@ -63,25 +50,18 @@ abstract contract UniswapV3RiskOnVault is Initializable, IUniswapV3RiskOnVault, 
     uint256 internal period;
     uint256 internal lastTimestamp;
     uint32 internal twapDuration;
-
-    //    /// @param tokenId The tokenId of V3 LP NFT minted
-    //    /// @param _tickLower The lower tick of the position in which to add liquidity
-    //    /// @param _tickUpper The upper tick of the position in which to add liquidity
-    //    struct MintInfo {
-    //        uint256 tokenId;
-    //        int24 tickLower;
-    //        int24 tickUpper;
-    //    }
-
     MintInfo internal baseMintInfo;
     MintInfo internal limitMintInfo;
-
-    IValueInterpreter public valueInterpreter;
+    IValueInterpreter internal valueInterpreter;
     UniswapV3RiskOnHelper internal uniswapV3RiskOnHelper;
 
     /// @notice Initialize this contract
+    /// @param _name The name
+    /// @param _owner The owner
     /// @param _wantToken The want token
     /// @param _pool The uniswap V3 pool
+    /// @param _uniswapV3RiskOnHelper The uniswap V3 helper
+    /// @param _valueInterpreter The value interpreter
     /// @param _baseThreshold The new base threshold
     /// @param _limitThreshold The new limit threshold
     /// @param _period The new period
@@ -90,8 +70,8 @@ abstract contract UniswapV3RiskOnVault is Initializable, IUniswapV3RiskOnVault, 
     /// @param _twapDuration The max TWAP duration
     /// @param _tickSpacing The tick spacing
     function _initialize(
-        address _owner,
         string memory _name,
+        address _owner,
         address _wantToken,
         address _pool,
         address _uniswapV3RiskOnHelper,
@@ -105,8 +85,9 @@ abstract contract UniswapV3RiskOnVault is Initializable, IUniswapV3RiskOnVault, 
         int24 _tickSpacing
     ) internal {
         super._initializeUniswapV3Liquidity(_pool);
-        owner = _owner;
+        super.__initLendConfigation(2, _wantToken, _wantToken == token0 ? token1 : token0);
         name = _name;
+        owner = _owner;
         wantToken = _wantToken;
         baseThreshold = _baseThreshold;
         limitThreshold = _limitThreshold;
@@ -115,11 +96,8 @@ abstract contract UniswapV3RiskOnVault is Initializable, IUniswapV3RiskOnVault, 
         maxTwapDeviation = _maxTwapDeviation;
         twapDuration = _twapDuration;
         tickSpacing = _tickSpacing;
-        __initLendConfigation(2, wantToken, wantToken == token0 ? token1 : token0);
-        console.log('----------------_initialize token0: %s, token1: %s', token0, token1);
-        console.log('----------------_initialize _wantToken: %s, borrowToken: %s', wantToken, borrowToken);
-        valueInterpreter = IValueInterpreter(_valueInterpreter);
         uniswapV3RiskOnHelper = UniswapV3RiskOnHelper(_uniswapV3RiskOnHelper);
+        valueInterpreter = IValueInterpreter(_valueInterpreter);
     }
 
     /// @notice Return the version of strategy
@@ -267,7 +245,7 @@ abstract contract UniswapV3RiskOnVault is Initializable, IUniswapV3RiskOnVault, 
         emit Redeem(_redeemBalance);
     }
 
-    function redeemToVaultByKeeper(uint256 _redeemShares, uint256 _totalShares) external isKeeper override returns (uint256 _redeemBalance) {
+    function redeemToVaultByKeeper(uint256 _redeemShares, uint256 _totalShares) external override returns (uint256 _redeemBalance) {
         _redeemBalance = redeemToVault(_redeemShares, _totalShares);
         emit RedeemToVault(_redeemBalance);
     }
@@ -344,7 +322,7 @@ abstract contract UniswapV3RiskOnVault is Initializable, IUniswapV3RiskOnVault, 
         }
     }
 
-    function borrowRebalance() external isKeeper whenNotEmergency nonReentrant override {
+    function borrowRebalance() external whenNotEmergency nonReentrant override {
         (uint256 _totalCollateral, uint256 _totalDebt, , , ,) = uniswapV3RiskOnHelper.borrowInfo(address(this));
 
         if (_totalDebt.mul(10000).div(_totalCollateral) >= 7500) {
@@ -391,7 +369,7 @@ abstract contract UniswapV3RiskOnVault is Initializable, IUniswapV3RiskOnVault, 
 
     /// @notice Rebalance the position of this strategy
     /// Requirements: only keeper can call
-    function rebalanceByKeeper() external isKeeper whenNotEmergency nonReentrant override {
+    function rebalanceByKeeper() external whenNotEmergency nonReentrant override {
         (, int24 _tick,,,,,) = pool.slot0();
         require(shouldRebalance(_tick), "NR");
         rebalance(_tick);

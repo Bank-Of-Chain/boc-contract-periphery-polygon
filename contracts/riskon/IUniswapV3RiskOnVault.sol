@@ -31,6 +31,12 @@ interface IUniswapV3RiskOnVault {
 
     /// @notice Version of strategy
     function getVersion() external pure returns (string memory);
+    
+    /// @notice Emergency shutdown
+    function emergencyShutdown() external view returns (bool);
+
+    /// @notice Net market making amount
+    function netMarketMakingAmount() external view returns (uint256);
 
     /// @notice Name of strategy
     function name() external view returns (string memory);

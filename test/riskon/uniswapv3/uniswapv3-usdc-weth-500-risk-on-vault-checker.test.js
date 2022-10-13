@@ -16,7 +16,7 @@ describe('【UniswapV3UsdcWeth500RiskOnVault Vault Checker】', function () {
         const wantToken = await uniswapV3UsdcWeth500RiskOnVault.wantToken();
         let wantTokenContract = await ERC20.at(wantToken);
         let wantTokenDecimals = await wantTokenContract.decimals();
-        wantToken.approve(mockUniswapV3Router.address, new BigNumber(10).pow(6).multipliedBy(new BigNumber(10).pow(wantTokenDecimals)), {"from": investor});
+        wantTokenContract.approve(mockUniswapV3Router.address, new BigNumber(10).pow(6).multipliedBy(new BigNumber(10).pow(wantTokenDecimals)), {"from": investor});
         await mockUniswapV3Router.swap('0x45dDa9cb7c25131DF268515131f647d726f50608', true, new BigNumber(10).pow(6).multipliedBy(new BigNumber(10).pow(wantTokenDecimals)), {"from": investor});
     }, {}, async function (vault) {
         const accounts = await ethers.getSigners();
@@ -43,11 +43,11 @@ describe('【UniswapV3UsdcWeth500RiskOnVault Vault Checker】', function () {
         const beforeBaseMintInfo = await uniswapV3UsdcWeth500RiskOnVault.getMintInfo();
         console.log('before rebalance beforeBaseMintInfo._baseTokenId: %d', beforeBaseMintInfo._baseTokenId);
         await uniswapV3UsdcWeth500RiskOnVault.rebalanceByKeeper({"from": keeper});
-        const afterBaseMintInfo = await uniswapV3UsdcWeth500RiskOnVault.baseMintInfo();
+        const afterBaseMintInfo = await uniswapV3UsdcWeth500RiskOnVault.getMintInfo();
         console.log('after rebalance afterBaseMintInfo._baseTokenId: %d', afterBaseMintInfo._baseTokenId);
-        assert(beforeBaseMintInfo.tokenId !== afterBaseMintInfo.tokenId, 'rebalance fail');
+        assert(beforeBaseMintInfo._baseTokenId !== afterBaseMintInfo._baseTokenId, 'rebalance fail');
 
-        wantToken.approve(mockUniswapV3Router.address, new BigNumber(10).pow(6).multipliedBy(new BigNumber(10).pow(wantTokenDecimals)), {from: investor});
+        wantTokenContract.approve(mockUniswapV3Router.address, new BigNumber(10).pow(6).multipliedBy(new BigNumber(10).pow(wantTokenDecimals)), {from: investor});
         await mockUniswapV3Router.swap("0x45dDa9cb7c25131DF268515131f647d726f50608", true, new BigNumber(10).pow(6).multipliedBy(new BigNumber(10).pow(wantTokenDecimals)), {"from": investor});
 
         await advanceBlock(1);
