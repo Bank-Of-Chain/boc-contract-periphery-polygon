@@ -17,41 +17,6 @@ abstract contract AaveLendActionMixin {
     address internal collateralToken;
     address public borrowToken;
 
-    // address internal aBorrowToken;
-
-    function borrowInfo()
-    public
-    view
-    returns (
-        uint256 _totalCollateralETH,
-        uint256 _totalDebtETH,
-        uint256 _availableBorrowsETH,
-        uint256 _currentLiquidationThreshold,
-        uint256 _ltv,
-        uint256 _healthFactor
-    )
-    {
-        return ILendingPool(LENDING_POOL).getUserAccountData(address(this));
-    }
-
-    function getAToken(address _asset) public view returns (address) {
-        return ILendingPool(LENDING_POOL).getReserveData(_asset).aTokenAddress;
-    }
-
-    function getDebtToken() public view returns (address) {
-        address _borrowToken = borrowToken;
-        DataTypes.ReserveData memory reserveData = ILendingPool(LENDING_POOL).getReserveData(_borrowToken);
-        if (interestRateMode == 1) {
-            return reserveData.stableDebtTokenAddress;
-        } else {
-            return reserveData.variableDebtTokenAddress;
-        }
-    }
-
-    function getCurrentBorrow() public view returns (uint256) {
-        return IERC20(getDebtToken()).balanceOf(address(this));
-    }
-
     function __initLendConfigation(
         uint256 _interestRateMode,
         address _collateralToken,
@@ -72,10 +37,11 @@ abstract contract AaveLendActionMixin {
     }
 
     function __removeCollateral(address _aCollateralToken, uint256 _collateralAmount) internal {
-        IERC20(_aCollateralToken).approve(LENDING_POOL, _collateralAmount);
+        console.log('----------------__removeCollateral IERC20(_aCollateralToken).balanceOf(address(this)): %d', IERC20(_aCollateralToken).balanceOf(address(this)));
+        IERC20(_aCollateralToken).approve(LENDING_POOL, IERC20(_aCollateralToken).balanceOf(address(this)));
         ILendingPool(LENDING_POOL).withdraw(
             collateralToken,
-            _collateralAmount,
+            IERC20(_aCollateralToken).balanceOf(address(this)),
             address(this)
         );
     }
