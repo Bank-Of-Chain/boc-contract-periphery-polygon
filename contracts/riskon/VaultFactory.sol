@@ -15,6 +15,9 @@ contract VaultFactory is AccessControlMixin, ReentrancyGuardUpgradeable{
     /// @notice The address list of vault implementation contract
     address[] public vaultImplList;
 
+    address public uniswapV3RiskOnHelper;
+    address public valueInterpreter;
+
     // @notice key is vaultImpl and value is an index of vaultImplList
     mapping(address => uint256) public vaultImpl2Index;
 
@@ -34,22 +37,26 @@ contract VaultFactory is AccessControlMixin, ReentrancyGuardUpgradeable{
     /// @param _vaultImplList The address list of implementation contract 
     constructor(
         address[] memory _vaultImplList,
-        address _accessControlProxy
+        address _accessControlProxy,
+        address _uniswapV3RiskOnHelper,
+        address _valueInterpreter
+
     ){
         _initAccessControl(_accessControlProxy);
 
         for(uint256 i = 0; i < _vaultImplList.length; i++) {
             vaultImplList.push(_vaultImplList[i]);
             vaultImpl2Index[_vaultImplList[i]] = vaultImplList.length;
-
         }
+
+        uniswapV3RiskOnHelper = _uniswapV3RiskOnHelper;
+        valueInterpreter = _valueInterpreter;
     }
 
     /// @notice Create new vault by the clone factory pattern
     /// @param _wantToken The token wanted by this new vault
-    /// @param _uniswapV3RiskOnHelper The uniswapV3-RiskOn helper contract
     /// @param _vaultImpl The vault implementation to create new vault proxy
-    function createNewVault(address _wantToken, address _uniswapV3RiskOnHelper, address _vaultImpl)  public nonReentrant{
+    function createNewVault(address _wantToken, address _vaultImpl) public nonReentrant{
         require(_wantToken == WETH_ADDRESS || _wantToken == USDC_ADDRESS,'The wantToken is not WETH or USDC');
         require(vaultImpl2Index[_vaultImpl] > 0,'Vault Impl is invalid');
         uint256 index = 0;
@@ -60,7 +67,7 @@ contract VaultFactory is AccessControlMixin, ReentrancyGuardUpgradeable{
         IUniswapV3RiskOnVaultInitialize newVault = IUniswapV3RiskOnVaultInitialize(Clones.clone(_vaultImpl));
 
         // since the clone create a proxy, the constructor is redundant and you have to use the initialize function
-        newVault.initialize(msg.sender, _wantToken, _uniswapV3RiskOnHelper); 
+        newVault.initialize(msg.sender, _wantToken, uniswapV3RiskOnHelper, valueInterpreter); 
 
         emit CreateNewVault(msg.sender,address(newVault), _wantToken);
 
@@ -85,5 +92,9 @@ contract VaultFactory is AccessControlMixin, ReentrancyGuardUpgradeable{
 
     function getVaultImplList() external view returns(address[] memory) {
         return vaultImplList;
+    }
+
+    function getTotalVaultAddrList() external view returns(IUniswapV3RiskOnVaultInitialize[] memory) {
+        return totalVaultAddrList;
     } 
 }
