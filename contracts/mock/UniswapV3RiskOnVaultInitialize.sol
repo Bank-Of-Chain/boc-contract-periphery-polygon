@@ -5,7 +5,12 @@ contract UniswapV3RiskOnVaultInitialize{
 
     address public owner;
 
-    function initialize(address _owner, address _wantToken, address _uniswapV3RiskOnHelper) public {
+    function initialize(
+        address _owner, 
+        address _wantToken,
+        address _uniswapV3RiskOnHelper,
+        address _valueInterpreter
+         ) public {
         require(owner == address(0), "already initialized");
         owner = _owner;
     }

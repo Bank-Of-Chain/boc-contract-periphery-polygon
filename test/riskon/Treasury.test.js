@@ -8,7 +8,7 @@ const ether = require('@openzeppelin/test-helpers/src/ether');
 const WETH_ADDRESS = '0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619';
 const USDC_ADDRESS = '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174';
 
-describe('VaultFactory', () => {
+describe('Treasury', () => {
 
      before(async () => {
          /* before tests */
@@ -31,7 +31,7 @@ describe('VaultFactory', () => {
         this.AccessControlProxy = await ethers.getContractFactory("AccessControlProxy");
         this.accessControlProxy = await this.AccessControlProxy.deploy();
         await this.accessControlProxy.deployed()
-        // 为什么第二个参数_delegate要和第一个参数_governance一样，不然报错deployer没有_delegate role
+   
         await this.accessControlProxy.initialize(this.deployer.address,this.deployer.address,this.vault.address,this.keeper.address);
 
         this.ERC20Mint = await ethers.getContractFactory("ERC20Mint");
@@ -82,7 +82,6 @@ describe('VaultFactory', () => {
         expect(await this.treasury.balance(this.wethMock.address)).to.be.equal(transferAmount);
      })
 
-     //setIsReceiveToken
      it('setTakeProfitFlag', async () => {
         expect(await this.treasury.takeProfitFlag()).to.be.equal(false);
         // set takeProfitFlag is true
