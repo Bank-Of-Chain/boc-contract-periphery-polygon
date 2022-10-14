@@ -1,12 +1,12 @@
-
-const { default: BigNumber } = require('bignumber.js');
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
 const { send, balance} = require("@openzeppelin/test-helpers");
-const ether = require('@openzeppelin/test-helpers/src/ether');
 
 const WETH_ADDRESS = '0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619';
 const USDC_ADDRESS = '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174';
+
+const usdcWhale = "0xe7804c37c13166fF0b37F5aE0BB07A3aEbb6e245"//Binance: Hot Wallet 2
+const wethWhale = "0x064917552b3121ed11321ecd8908fc79d00bcbb7";
 
 describe('Treasury', () => {
 
@@ -38,8 +38,8 @@ describe('Treasury', () => {
         this.wethMock = await this.ERC20Mint.deploy("weth mock token", "WETH");
         await this.wethMock.deployed()
 
-        this.usdcMock = await this.ERC20Mint.deploy("usdc mock token", "USDC");
-        await this.usdcMock.deployed()
+         this.usdcMock = await this.ERC20Mint.deploy("usdc mock token", "USDC");
+         await this.usdcMock.deployed()
 
         this.nonReceivableToken = await this.ERC20Mint.deploy("Non Receivable Token", "NRT");
         await this.nonReceivableToken.deployed()
@@ -51,7 +51,12 @@ describe('Treasury', () => {
         this.Treasury = await ethers.getContractFactory("contracts/riskon/Treasury.sol:Treasury");
         this.treasury = await this.Treasury.deploy();
         await this.treasury.deployed();
-        await this.treasury.initialize(this.accessControlProxy.address, this.wethMock.address, this.usdcMock.address);
+        await this.treasury.initialize(
+            this.accessControlProxy.address, 
+            this.wethMock.address, 
+            this.usdcMock.address,
+            this.keeper.address
+        );
 
      })
 
@@ -68,19 +73,62 @@ describe('Treasury', () => {
      })
 
      it('receiveProfitFromVault', async () => {
-        let transferAmount = ethers.BigNumber.from(10).pow(18).mul(1000);
-        // when takeProfitFlag is false, receive 0 from vault
-        await this.treasury.receiveProfitFromVault(this.wethMock.address,transferAmount);
+      let transferAmount = ethers.BigNumber.from(10).pow(18).mul(1000);
+      // when takeProfitFlag is false, receive 0 from vault
+      await this.treasury.receiveProfitFromVault(this.wethMock.address,transferAmount);
 
-        // set takeProfitFlag is true
-        await this.treasury.setTakeProfitFlag(true);
-        expect(await this.treasury.takeProfitFlag()).to.be.equal(true);
-        await this.wethMock.approve(this.treasury.address,transferAmount);
-        await this.treasury.receiveProfitFromVault(this.wethMock.address,transferAmount);
-        expect(await this.treasury.accVaultProfit(this.deployer.address,this.wethMock.address)).to.be.equal(transferAmount);
+      // set takeProfitFlag is true
+      await this.treasury.setTakeProfitFlag(true);
+      expect(await this.treasury.takeProfitFlag()).to.be.equal(true);
+      await this.wethMock.approve(this.treasury.address,transferAmount);
+      await this.treasury.receiveProfitFromVault(this.wethMock.address,transferAmount);
+      expect(await this.treasury.accVaultProfit(this.deployer.address,this.wethMock.address)).to.be.equal(transferAmount);
 
-        expect(await this.treasury.balance(this.wethMock.address)).to.be.equal(transferAmount);
+      expect(await this.treasury.balance(this.wethMock.address)).to.be.equal(transferAmount);
      })
+
+     it('receiveManageFeeFromVault', async () => {
+         this.wethMock = await this.ERC20Mint.attach(WETH_ADDRESS);
+         this.usdcMock = await this.ERC20Mint.attach(USDC_ADDRESS);
+         await this.treasury.setIsReceivableToken(WETH_ADDRESS,true);
+         await this.treasury.setIsReceivableToken(USDC_ADDRESS,true);
+
+         let transferAmountNonToken = ethers.BigNumber.from(10).pow(18).mul(1000);
+         await expect(this.treasury.receiveProfitFromVault(this.nonReceivableToken.address,transferAmountNonToken))
+         .to.revertedWith('Not receivable token');
+         
+         const wethUser = await ethers.getImpersonatedSigner(wethWhale);
+         const usdcUser = await ethers.getImpersonatedSigner(usdcWhale);
+
+         let keeperBal = await balance.current(this.keeper.address);
+         console.log("keeper-bal is ", keeperBal.toString());
+
+         let transferAmount = ethers.BigNumber.from(10).pow(6).mul(1000);// usdc decinal is 6
+
+         await this.usdcMock.connect(usdcUser).approve(this.treasury.address,transferAmount);
+         await this.treasury.connect(usdcUser).receiveManageFeeFromVault(this.usdcMock.address,transferAmount);
+         let accManageFee = await this.treasury.accManageFee(usdcUser.address,this.usdcMock.address)
+         expect(accManageFee).to.be.equal(transferAmount);
+         let totalManageFeeInMatic2Keeper = await this.treasury.totalManageFeeInMatic2Keeper();
+         
+         keeperBal = await balance.current(this.keeper.address);
+         console.log("keeper-bal is ", keeperBal.toString());
+
+         let transferAmountWeth = ethers.BigNumber.from(10).pow(18).mul(1);// weth decinal is 18
+
+         let transferAmountMatic = ethers.BigNumber.from(10).pow(18).mul(1000);
+         await send.ether(this.deployer.address,wethUser.address,transferAmountMatic);
+
+         await this.wethMock.connect(wethUser).approve(this.treasury.address,transferAmountWeth);
+         await this.treasury.connect(wethUser).receiveManageFeeFromVault(this.wethMock.address,transferAmountWeth);
+         let accManageFeeWeth = await this.treasury.accManageFee(wethUser.address,this.wethMock.address)
+         expect(accManageFeeWeth).to.be.equal(transferAmountWeth);
+         totalManageFeeInMatic2Keeper = await this.treasury.totalManageFeeInMatic2Keeper();
+
+         keeperBal = await balance.current(this.keeper.address);
+         console.log("keeper-bal is ", keeperBal.toString());
+         
+      })
 
      it('setTakeProfitFlag', async () => {
         expect(await this.treasury.takeProfitFlag()).to.be.equal(false);

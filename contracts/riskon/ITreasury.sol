@@ -33,6 +33,12 @@ interface ITreasury {
     /// @param _amount The amount of ETH to withdraw
     function withdrawETH(address payable _receiver, uint256 _amount) external payable;
 
+    /// @notice Receive manage fee from a vault and swap from `_token` to Matic
+    ///         and the recipient of this swap is keeper
+    /// @param _token The fee token
+    /// @param _feeAmount The fee amount
+    function receiveManageFeeFromVault(address _token, uint256 _feeAmount) external;
+
     /// @notice Receive profits from a vault
     /// @param _token The profit token
     /// @param _profitAmount The profit amount

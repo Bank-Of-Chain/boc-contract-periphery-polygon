@@ -290,7 +290,7 @@ const main = async () => {
 	if (isEmpty(addressMap[Treasury])) {
 		treasury = await deployProxyBase(
 			Treasury, 
-			[AccessControlProxy,MFC_PRODUCTION.WETH_ADDRESS,MFC_PRODUCTION.USDC_ADDRESS]
+			[AccessControlProxy,MFC_PRODUCTION.WETH_ADDRESS,MFC_PRODUCTION.USDC_ADDRESS,keeper]
 		);
 	}
 

@@ -8,7 +8,10 @@ import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import 'boc-contract-core/contracts/access-control/AccessControlMixin.sol';
 import 'boc-contract-core/contracts/library/BocRoles.sol';
+import '../../library/RiskOnConstant.sol';
+import './../external/uniswap/IUniswapV3.sol';
 import './ITreasury.sol';
+import '../external/riskon/IWMATIC.sol';
 
 /// @title Treasury
 /// @notice Treasury contract mainly used to keep the portion of profit transfered to treasury
@@ -21,6 +24,9 @@ contract Treasury is
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    // vault => token => total manage fee amount
+    mapping(address => mapping(address => uint256)) public accManageFee;
+
     // vault => token => accumulate profitAmount
     mapping(address => mapping(address => uint256)) public accVaultProfit;
 
@@ -29,6 +35,17 @@ contract Treasury is
 
     /// @notice The flag of taking profit
     bool public takeProfitFlag;
+
+    /// @notice The keeper to receive manage fee
+    address payable public keeper;
+
+    /// @notice The total Matic amount transfered to keeper
+    uint256 public totalManageFeeInMatic2Keeper;
+
+    /// @param _vault The vault with profits
+    /// @param _token The fee token
+    /// @param _feeAmount The fee amount
+    event ReceiveManageFee(address indexed _vault, address indexed _token, uint256 _feeAmount);
     
     /// @param _vault The vault with profits
     /// @param _token The profit token
@@ -49,10 +66,12 @@ contract Treasury is
     function initialize(
         address _accessControlProxy, 
         address _weth, 
-        address _usdc
+        address _usdc,
+        address payable _keeper
     ) public initializer {
         isReceivableToken[_weth]= true;
         isReceivableToken[_usdc]= true;
+        keeper = _keeper;
         _initAccessControl(_accessControlProxy);
     }
 
@@ -92,6 +111,39 @@ contract Treasury is
     {
         require(_amount <= address(this).balance, '!insufficient');
         _receiver.transfer(_amount);
+    }
+
+    /// @inheritdoc ITreasury
+    function receiveManageFeeFromVault(address _token, uint256 _feeAmount) external override{
+        require(isReceivableToken[_token],'Not receivable token');
+
+        if (_feeAmount > 0) {
+            // receive manage fee
+            IERC20Upgradeable(_token).safeTransferFrom(msg.sender, address(this), _feeAmount);
+            accManageFee[msg.sender][_token] += _feeAmount;
+            emit ReceiveManageFee(msg.sender, _token, _feeAmount);
+
+            // swap from `_token` to Matic, the recipient is keeper
+            IERC20Upgradeable(_token).safeApprove(RiskOnConstant.UNISWAP_V3_ROUTER, 0);
+            IERC20Upgradeable(_token).safeApprove(RiskOnConstant.UNISWAP_V3_ROUTER, _feeAmount);
+            uint256 amountOutMatic = IUniswapV3(RiskOnConstant.UNISWAP_V3_ROUTER).exactInputSingle(
+                IUniswapV3.ExactInputSingleParams(
+                    _token, 
+                    RiskOnConstant.WMATIC, 
+                    500, // fee
+                    address(this), 
+                    block.timestamp, 
+                    _feeAmount, 
+                    0, 
+                    0
+                )
+            );
+            totalManageFeeInMatic2Keeper += amountOutMatic;
+
+            // withdraw wmatic to matic, then transfer matic to keeper
+            IWMATIC(RiskOnConstant.WMATIC).withdraw(amountOutMatic);
+            keeper.transfer(amountOutMatic);
+        }
     }
     
     /// @inheritdoc ITreasury
