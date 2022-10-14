@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
@@ -11,6 +12,7 @@ import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import '@uniswap/v3-core/contracts/interfaces/IERC20Minimal.sol';
 import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 import '@uniswap/v3-core/contracts/libraries/SqrtPriceMath.sol';
+import "boc-contract-core/contracts/price-feeds/IValueInterpreter.sol";
 import "boc-contract-core/contracts/access-control/AccessControlMixin.sol";
 import "./../external/uniswap/IUniswapV3.sol";
 import './../external/uniswapv3/INonfungiblePositionManager.sol';
@@ -25,7 +27,22 @@ import "../../library/RiskOnConstant.sol";
 
 /// @title UniswapV3RiskOnHelper
 /// @author Bank of Chain Protocol Inc
-contract UniswapV3RiskOnHelper {
+contract UniswapV3RiskOnHelper is Initializable {
+    using SafeMath for uint256;
+
+    uint256 internal constant AAVE_BASE_CURRENCY_UNIT = 10 ** 8;
+    uint256 internal constant VALUE_INTERPRETER_PRICE_BASE_UNIT = 10 ** 18;
+
+    IValueInterpreter internal valueInterpreter;
+
+    /// @notice Initialize this contract
+    /// @param _valueInterpreter The value interpreter
+    function initialize(
+        address _valueInterpreter
+    ) public initializer {
+        console.log('----------------_initialize _valueInterpreter: %s', _valueInterpreter);
+        valueInterpreter = IValueInterpreter(_valueInterpreter);
+    }
 
     /// @notice Gets the specifie ranges of `_tick`
     /// @param _tick The input number of tick
@@ -44,16 +61,21 @@ contract UniswapV3RiskOnHelper {
         _tickUpper = _tickCeil + _baseThreshold;
     }
 
-    function borrowInfo(address _user) public view returns (
-        uint256 _totalCollateralETH,
-        uint256 _totalDebtETH,
-        uint256 _availableBorrowsETH,
+    function borrowInfo(address _account) public view returns (
+        uint256 _totalCollateralBase,
+        uint256 _totalDebtBase,
+        uint256 _availableBorrowsBase,
         uint256 _currentLiquidationThreshold,
         uint256 _ltv,
         uint256 _healthFactor
     )
     {
-        return ILendingPool(RiskOnConstant.LENDING_POOL).getUserAccountData(_user);
+        return ILendingPool(RiskOnConstant.LENDING_POOL).getUserAccountData(_account);
+    }
+
+    function getTotalCollateralTokenAmount(address _account, address _collateralToken) public view returns (uint256 _totalCollateralToken) {
+        (uint256 _totalCollateralBase,,,,,) = borrowInfo(_account);
+        _totalCollateralToken = _totalCollateralBase.mul(10 ** uint256(ERC20(_collateralToken).decimals())).mul(VALUE_INTERPRETER_PRICE_BASE_UNIT).div(valueInterpreter.price(_collateralToken)).div(AAVE_BASE_CURRENCY_UNIT);
     }
 
     function getAToken(address _asset) public view returns (address) {
@@ -61,11 +83,7 @@ contract UniswapV3RiskOnHelper {
     }
 
     function getDebtToken(address _borrowToken, uint256 _interestRateMode) public view returns (address) {
-        console.log('----------------getDebtToken _borrowToken: %s, _interestRateMode: %d', _borrowToken, _interestRateMode);
         DataTypes.ReserveData memory reserveData = ILendingPool(RiskOnConstant.LENDING_POOL).getReserveData(_borrowToken);
-
-        console.log('----------------reserveData reserveData.stableDebtTokenAddress: %s, reserveData.variableDebtTokenAddress: %s', reserveData.stableDebtTokenAddress, reserveData.variableDebtTokenAddress);
-
         if (_interestRateMode == 1) {
             return reserveData.stableDebtTokenAddress;
         } else {
@@ -75,5 +93,9 @@ contract UniswapV3RiskOnHelper {
 
     function getCurrentBorrow(address _borrowToken, uint256 _interestRateMode, address _account) public view returns (uint256) {
         return IERC20(getDebtToken(_borrowToken, _interestRateMode)).balanceOf(_account);
+    }
+
+    function calcCanonicalAssetValue(address _baseAsset, uint256 _amount, address _quoteAsset) public view returns (uint256) {
+        return valueInterpreter.calcCanonicalAssetValue(_baseAsset, _amount, _quoteAsset);
     }
 }

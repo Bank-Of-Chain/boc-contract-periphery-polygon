@@ -16,7 +16,6 @@ contract VaultFactory is AccessControlMixin, ReentrancyGuardUpgradeable{
     address[] public vaultImplList;
 
     address public uniswapV3RiskOnHelper;
-    address public valueInterpreter;
 
     // @notice key is vaultImpl and value is an index of vaultImplList
     mapping(address => uint256) public vaultImpl2Index;
@@ -38,8 +37,7 @@ contract VaultFactory is AccessControlMixin, ReentrancyGuardUpgradeable{
     constructor(
         address[] memory _vaultImplList,
         address _accessControlProxy,
-        address _uniswapV3RiskOnHelper,
-        address _valueInterpreter
+        address _uniswapV3RiskOnHelper
 
     ){
         _initAccessControl(_accessControlProxy);
@@ -50,7 +48,6 @@ contract VaultFactory is AccessControlMixin, ReentrancyGuardUpgradeable{
         }
 
         uniswapV3RiskOnHelper = _uniswapV3RiskOnHelper;
-        valueInterpreter = _valueInterpreter;
     }
 
     /// @notice Create new vault by the clone factory pattern
@@ -67,7 +64,7 @@ contract VaultFactory is AccessControlMixin, ReentrancyGuardUpgradeable{
         IUniswapV3RiskOnVaultInitialize newVault = IUniswapV3RiskOnVaultInitialize(Clones.clone(_vaultImpl));
 
         // since the clone create a proxy, the constructor is redundant and you have to use the initialize function
-        newVault.initialize(msg.sender, _wantToken, uniswapV3RiskOnHelper, valueInterpreter); 
+        newVault.initialize(msg.sender, _wantToken, uniswapV3RiskOnHelper);
 
         emit CreateNewVault(msg.sender,address(newVault), _wantToken);
 

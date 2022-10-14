@@ -36,12 +36,11 @@ abstract contract AaveLendActionMixin {
         ILendingPool(LENDING_POOL).deposit(collateralToken, _collateralAmount, address(this), 0);
     }
 
-    function __removeCollateral(address _aCollateralToken, uint256 _collateralAmount) internal {
-        console.log('----------------__removeCollateral IERC20(_aCollateralToken).balanceOf(address(this)): %d', IERC20(_aCollateralToken).balanceOf(address(this)));
-        IERC20(_aCollateralToken).approve(LENDING_POOL, IERC20(_aCollateralToken).balanceOf(address(this)));
+    function __removeCollateral(address _aCollateralToken, uint256 _acollateralAmount) internal {
+        IERC20(_aCollateralToken).approve(LENDING_POOL, _acollateralAmount);
         ILendingPool(LENDING_POOL).withdraw(
             collateralToken,
-            IERC20(_aCollateralToken).balanceOf(address(this)),
+            _acollateralAmount,
             address(this)
         );
     }

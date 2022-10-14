@@ -1,4 +1,5 @@
 const {
+    topUpWethByAddress,
     topUpUsdtByAddress,
     topUpUsdcByAddress,
     topUpDaiByAddress
@@ -15,6 +16,7 @@ const main = async () => {
     // account1
     await topUpUsdtByAddress(new BigNumber(10 ** 12), accounts[1].address);
     // admin account0
+    await topUpWethByAddress(new BigNumber(10 ** 24), accounts[0].address);
     await topUpUsdtByAddress(new BigNumber(10 ** 12), accounts[0].address);
     await topUpDaiByAddress(new BigNumber(10 ** 24), accounts[0].address);
     await topUpUsdcByAddress(new BigNumber(10 ** 12), accounts[0].address);
