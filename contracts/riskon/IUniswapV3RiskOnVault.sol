@@ -38,9 +38,6 @@ interface IUniswapV3RiskOnVault {
     /// @notice Net market making amount
     function netMarketMakingAmount() external view returns (uint256);
 
-    /// @notice Name of strategy
-    function name() external view returns (string memory);
-
     /// @notice Gets the statuses about uniswap V3
     function getStatus() external view returns (address _owner, address _wantToken, int24 _baseThreshold, int24 _limitThreshold, int24 _minTickMove, int24 _maxTwapDeviation, int24 _lastTick, int24 _tickSpacing, uint256 _period, uint256 _lastTimestamp, uint32 _twapDuration);
 

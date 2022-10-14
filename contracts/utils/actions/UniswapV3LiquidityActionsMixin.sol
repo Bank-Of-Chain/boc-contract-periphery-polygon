@@ -19,7 +19,7 @@ abstract contract UniswapV3LiquidityActionsMixin {
     INonfungiblePositionManager internal constant nonfungiblePositionManager = INonfungiblePositionManager(0xC36442b4a4522E871399CD717aBDD847Ab11FE88);
 
     /// @dev The uniswap V3 pool inteface
-    IUniswapV3Pool internal pool;
+    IUniswapV3Pool public pool;
 
     /// @dev The token0 of uniswap V3 `pool`
     address internal token0;

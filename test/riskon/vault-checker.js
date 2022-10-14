@@ -96,9 +96,10 @@ async function check(vaultName, callback, exchangeRewardTokenCallback, uniswapV3
         await _initPriceFeed();
         // init uniswapV3RiskOnHelper
         uniswapV3RiskOnHelper = await UniswapV3RiskOnHelper.new();
+        await uniswapV3RiskOnHelper.initialize(valueInterpreter.address);
         // init uniswapV3UsdcWeth500RiskOnVault
         uniswapV3UsdcWeth500RiskOnVault = await UniswapV3UsdcWeth500RiskOnVault.new();
-        uniswapV3UsdcWeth500RiskOnVault.initialize(investor, MFC.USDC_ADDRESS, uniswapV3RiskOnHelper.address, valueInterpreter.address);
+        await uniswapV3UsdcWeth500RiskOnVault.initialize(investor, MFC.USDC_ADDRESS, uniswapV3RiskOnHelper.address);
         console.log('uniswapV3UsdcWeth500RiskOnVault address: %s', uniswapV3UsdcWeth500RiskOnVault.address);
         // init mockUniswapV3Router
         mockUniswapV3Router = await MockUniswapV3Router.new();
@@ -134,7 +135,6 @@ async function check(vaultName, callback, exchangeRewardTokenCallback, uniswapV3
         await uniswapV3UsdcWeth500RiskOnVault.lend(depositedAmount, {from: investor});
         // await advanceBlock(1);
         const estimatedTotalAssets = new BigNumber(await uniswapV3UsdcWeth500RiskOnVault.estimatedTotalAssets());
-        depositedAmount = depositedAmount;
         let delta = depositedAmount.minus(estimatedTotalAssets);
         console.log('depositedAmount: %d, estimatedTotalAssets: %d, delta: %d', depositedAmount, estimatedTotalAssets, delta);
         assert(delta.abs().isLessThan(depositedAmount.multipliedBy(3).dividedBy(10 ** 4)), 'estimatedTotalAssets does not match depositedAmount value');
@@ -181,8 +181,9 @@ async function check(vaultName, callback, exchangeRewardTokenCallback, uniswapV3
 
     it('[estimatedTotalAssets should be 0 after withdraw all assets]', async function () {
         const estimatedTotalAssetsBefore = new BigNumber(await uniswapV3UsdcWeth500RiskOnVault.estimatedTotalAssets());
-        await uniswapV3UsdcWeth500RiskOnVault.redeem(estimatedTotalAssetsBefore, estimatedTotalAssetsBefore, {from: investor});
-        const estimatedTotalAssetsAfter = new BigNumber(await uniswapV3UsdcWeth500RiskOnVault.estimatedTotalAssets()).dividedBy(10 ** 18);
+        console.log('before withdraw all shares,strategy assets: %d', estimatedTotalAssetsBefore);
+        await uniswapV3UsdcWeth500RiskOnVault.redeem(100, 100, {from: investor});
+        const estimatedTotalAssetsAfter = new BigNumber(await uniswapV3UsdcWeth500RiskOnVault.estimatedTotalAssets());
         console.log('After withdraw all shares,strategy assets: %d', estimatedTotalAssetsAfter);
         assert.isTrue(estimatedTotalAssetsAfter.multipliedBy(10000).isLessThan(depositedAmount), 'assets left in strategy should not be more than 1/10000');
     });
