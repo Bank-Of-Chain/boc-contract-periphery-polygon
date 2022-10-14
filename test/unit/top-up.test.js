@@ -1,4 +1,5 @@
 const {
+    topUpWethByAddress,
     topUpUsdtByAddress,
     topUpDaiByAddress,
     topUpUsdcByAddress,
@@ -19,12 +20,12 @@ describe("【Verify】Recharge Script", function () {
         })
     })
 
-    it("topUpUsdtByAddress", async function () {
-        const contract = await ERC20.at(addresses.USDT_ADDRESS)
+    it("topUpWethByAddress", async function () {
+        const contract = await ERC20.at(addresses.WETH_ADDRESS)
         const decimals = await contract.decimals();
         const topUpAmount = new BigNumber(10).pow(decimals).multipliedBy(new BigNumber(10).pow(9))
         Utils.assertBNEq(await contract.balanceOf(farmer1), 0)
-        await topUpUsdtByAddress(topUpAmount, farmer1)
+        await topUpWethByAddress(topUpAmount, farmer1)
         Utils.assertBNEq(await contract.balanceOf(farmer1), topUpAmount)
     })
 
