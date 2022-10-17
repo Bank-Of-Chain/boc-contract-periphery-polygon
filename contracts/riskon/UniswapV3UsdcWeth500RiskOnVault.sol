@@ -6,9 +6,6 @@ import './IUniswapV3RiskOnVaultInitialize.sol';
 
 contract UniswapV3UsdcWeth500RiskOnVault is IUniswapV3RiskOnVaultInitialize, UniswapV3RiskOnVault {
 
-    /// @notice  name
-    string public name = 'UniswapV3UsdcWeth500';
-
     function initialize(address _owner, address _wantToken, address _uniswapV3RiskOnHelper, address _treasury, address _accessControlProxy) public override initializer {
         super._initialize(
             _owner,
@@ -30,5 +27,20 @@ contract UniswapV3UsdcWeth500RiskOnVault is IUniswapV3RiskOnVaultInitialize, Uni
             _treasury,
             _accessControlProxy
         );
+    }
+
+    // name
+    function name() external pure returns (string memory) {
+        return 'UniswapV3UsdcWeth500';
+    }
+
+    // USDC
+    function token0() public pure override returns (address) {
+        return address(0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174);
+    }
+
+    // WETH
+    function token1() public pure override returns (address) {
+        return address(0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619);
     }
 }

@@ -21,19 +21,11 @@ abstract contract UniswapV3LiquidityActionsMixin {
     /// @dev The uniswap V3 pool inteface
     IUniswapV3Pool public pool;
 
-    /// @dev The token0 of uniswap V3 `pool`
-    address internal token0;
-
-    /// @dev The token1 of uniswap V3 `pool`
-    address internal token1;
-
     /// @dev The fee of uniswap V3 `pool`
     uint24 internal fee;
 
-    function _initializeUniswapV3Liquidity(address _pool) internal {
+    function _initializeUniswapV3Liquidity(address _pool, address token0, address token1) internal {
         pool = IUniswapV3Pool(_pool);
-        token0 = pool.token0();
-        token1 = pool.token1();
         fee = pool.fee();
 
         // Approve the NFT manager once for the max of each token

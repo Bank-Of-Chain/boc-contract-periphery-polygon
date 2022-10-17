@@ -93,9 +93,9 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
         address _treasury,
         address _accessControlProxy
     ) internal {
-        super._initializeUniswapV3Liquidity(_pool);
+        super._initializeUniswapV3Liquidity(_pool, token0(), token1());
         wantToken = _wantToken;
-        super.__initLendConfigation(_interestRateMode, wantToken, wantToken == token0 ? token1 : token0);
+        super.__initLendConfigation(_interestRateMode, wantToken, wantToken == token0() ? token1() : token0());
         owner = _owner;
         manageFeeBps = 100;
         profitFeeBps = 0;
@@ -115,6 +115,11 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
     function getVersion() external pure override returns (string memory) {
         return "1.0.0";
     }
+
+    /// @notice Return the version of strategy
+    function token0() public pure virtual returns (address);
+
+    function token1() public pure virtual returns (address);
 
     /// @notice Gets the statuses about uniswap V3
     /// @return _owner The owner
@@ -139,13 +144,13 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
 
     /// @notice Total assets
     function estimatedTotalAssets() external view override returns (uint256 _totalAssets) {
-        uint256 amount0 = balanceOfToken(token0);
-        uint256 amount1 = balanceOfToken(token1);
+        uint256 amount0 = balanceOfToken(token0());
+        uint256 amount1 = balanceOfToken(token1());
         _totalAssets = depositTo3rdPoolTotalAssets();
-        if (wantToken == token0) {
-            _totalAssets += (amount0 + uniswapV3RiskOnHelper.getTotalCollateralTokenAmount(address(this), wantToken) + uniswapV3RiskOnHelper.calcCanonicalAssetValue(token1, amount1, token0) - uniswapV3RiskOnHelper.calcCanonicalAssetValue(token1, uniswapV3RiskOnHelper.getCurrentBorrow(borrowToken, interestRateMode, address(this)), token0));
+        if (wantToken == token0()) {
+            _totalAssets += (amount0 + uniswapV3RiskOnHelper.getTotalCollateralTokenAmount(address(this), wantToken) + uniswapV3RiskOnHelper.calcCanonicalAssetValue(token1(), amount1, token0()) - uniswapV3RiskOnHelper.calcCanonicalAssetValue(token1(), uniswapV3RiskOnHelper.getCurrentBorrow(borrowToken, interestRateMode, address(this)), token0()));
         } else {
-            _totalAssets += (amount1 + uniswapV3RiskOnHelper.getTotalCollateralTokenAmount(address(this), wantToken) + uniswapV3RiskOnHelper.calcCanonicalAssetValue(token0, amount0, token1) - uniswapV3RiskOnHelper.calcCanonicalAssetValue(token0, uniswapV3RiskOnHelper.getCurrentBorrow(borrowToken, interestRateMode, address(this)), token1));
+            _totalAssets += (amount1 + uniswapV3RiskOnHelper.getTotalCollateralTokenAmount(address(this), wantToken) + uniswapV3RiskOnHelper.calcCanonicalAssetValue(token0(), amount0, token1()) - uniswapV3RiskOnHelper.calcCanonicalAssetValue(token0(), uniswapV3RiskOnHelper.getCurrentBorrow(borrowToken, interestRateMode, address(this)), token1()));
         }
     }
 
@@ -157,10 +162,10 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
         (_amount0, _amount1) = balanceOfPoolWants(limitMintInfo);
         amount0 += _amount0;
         amount1 += _amount1;
-        if (wantToken == token0) {
-            _totalAssets = amount0 + uniswapV3RiskOnHelper.calcCanonicalAssetValue(token1, amount1, token0);
+        if (wantToken == token0()) {
+            _totalAssets = amount0 + uniswapV3RiskOnHelper.calcCanonicalAssetValue(token1(), amount1, token0());
         } else {
-            _totalAssets = amount1 + uniswapV3RiskOnHelper.calcCanonicalAssetValue(token0, amount0, token1);
+            _totalAssets = amount1 + uniswapV3RiskOnHelper.calcCanonicalAssetValue(token0(), amount0, token1());
         }
     }
 
@@ -180,8 +185,8 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
     function harvest() public override returns (address[] memory _rewardsTokens, uint256[] memory _claimAmounts) {
         lastHarvest = block.timestamp;
         _rewardsTokens = new address[](2);
-        _rewardsTokens[0] = token0;
-        _rewardsTokens[1] = token1;
+        _rewardsTokens[0] = token0();
+        _rewardsTokens[1] = token1();
         _claimAmounts = new uint256[](2);
         uint256 _amount0;
         uint256 _amount1;
@@ -200,12 +205,16 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
             if (_claimAmounts[0] > 0) {
                 uint256 claimAmount0Fee = _claimAmounts[0] * profitFeeBps / 10000;
                 _claimAmounts[0] -= claimAmount0Fee;
-                IERC20Upgradeable(token0).safeTransfer(address(treasury), claimAmount0Fee);
+                IERC20Upgradeable(token0()).safeApprove(address(treasury), 0);
+                IERC20Upgradeable(token0()).safeApprove(address(treasury), claimAmount0Fee);
+                treasury.receiveProfitFromVault(token0(), claimAmount0Fee);
             }
             if (_claimAmounts[1] > 0) {
                 uint256 claimAmount1Fee = _claimAmounts[1] * profitFeeBps / 10000;
                 _claimAmounts[1] -= claimAmount1Fee;
-                IERC20Upgradeable(token1).safeTransfer(address(treasury), claimAmount1Fee);
+                IERC20Upgradeable(token1()).safeApprove(address(treasury), 0);
+                IERC20Upgradeable(token1()).safeApprove(address(treasury), claimAmount1Fee);
+                treasury.receiveProfitFromVault(token1(), claimAmount1Fee);
             }
         }
         emit StrategyReported(_rewardsTokens, _claimAmounts);
@@ -232,8 +241,8 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
                 rebalance(_tick);
             } else {
                 // addLiquidityTo3rdPool
-                uint256 _balance0 = balanceOfToken(token0);
-                uint256 _balance1 = balanceOfToken(token1);
+                uint256 _balance0 = balanceOfToken(token0());
+                uint256 _balance1 = balanceOfToken(token1());
                 if (_balance0 > 0 && _balance1 > 0) {
                     //add liquidity
                     nonfungiblePositionManager.increaseLiquidity(INonfungiblePositionManager.IncreaseLiquidityParams({
@@ -244,8 +253,8 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
                     amount1Min : 0,
                     deadline : block.timestamp
                     }));
-                    _balance0 = balanceOfToken(token0);
-                    _balance1 = balanceOfToken(token1);
+                    _balance0 = balanceOfToken(token0());
+                    _balance1 = balanceOfToken(token1());
                 }
                 if (_balance0 > 0 && _balance1 > 0) {
                     //add liquidity
@@ -480,12 +489,12 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
     function depositTo3rdPool(int24 _tick) internal {
         // Mint new base and limit position
         (int24 _tickFloor, int24 _tickCeil, int24 _tickLower, int24 _tickUpper) = uniswapV3RiskOnHelper.getSpecifiedRangesOfTick(_tick, tickSpacing, baseThreshold);
-        uint256 _balance0 = balanceOfToken(token0);
-        uint256 _balance1 = balanceOfToken(token1);
+        uint256 _balance0 = balanceOfToken(token0());
+        uint256 _balance1 = balanceOfToken(token1());
         if (_balance0 > 0 && _balance1 > 0) {
             mintNewPosition(_tickLower, _tickUpper, _balance0, _balance1, true);
-            _balance0 = balanceOfToken(token0);
-            _balance1 = balanceOfToken(token1);
+            _balance0 = balanceOfToken(token0());
+            _balance1 = balanceOfToken(token1());
         }
 
         if (_balance0 > 0 || _balance1 > 0) {
@@ -536,8 +545,8 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
     )
     {
         (_tokenId, _liquidity, _amount0, _amount1) = __mint(INonfungiblePositionManager.MintParams({
-        token0 : token0,
-        token1 : token1,
+        token0 : token0(),
+        token1 : token1(),
         fee : fee,
         tickLower : _tickLower,
         tickUpper : _tickUpper,
