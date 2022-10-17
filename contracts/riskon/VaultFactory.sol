@@ -110,36 +110,49 @@ contract VaultFactory is Initializable, AccessControlMixin, ReentrancyGuardUpgra
         vaultImpl2Index[_vaultImpl] = vaultImplList.length;
     }
 
+    /// @notice Gets the length of `totalVaultAddrList`
     function getVaultsLen() external view returns(uint256){
         return totalVaultAddrList.length;
     }
 
+    /// @notice Gets the address list  of vault implementations
     function getVaultImplList() external view returns(address[] memory) {
         return vaultImplList;
     }
 
+    /// @notice Gets all address list of vaults created
     function getTotalVaultAddrList() external view returns(IUniswapV3RiskOnVaultInitialize[] memory) {
         return totalVaultAddrList;
     }
 
+    /// @notice Gets two address list of weth investors and usd investors
     function getTwoInvestorlist() external view returns(address[] memory _wethInvestorSet,address[] memory _usdInvestorSet){
         _wethInvestorSet = wethInvestorSet.values();
         _usdInvestorSet = stablecoinInvestorSet.values();
     }
 
+    /// @notice Gets two length of weth investor list and usd investor list
     function getTwoInvestorlistLen() external view returns(uint256 _wethInvestorSetLen,uint256 _stablecoinInvestorSetLen){
         _wethInvestorSetLen = wethInvestorSet.length();
         _stablecoinInvestorSetLen = stablecoinInvestorSet.length();
     }
 
+    /// @notice Gets one WETH investor by `_index`
+    /// @param _index The index of return investor on `wethInvestorSet`
+    /// @return The investor address
     function getWethInvestorByIndex(uint256 _index) external view returns(address) {
         return wethInvestorSet.at(_index);
     }
 
+    /// @notice Gets one stablecoin investor by `_index`
+    /// @param _index The index of return investor on `stablecoinInvestorSet`
+    /// @return The investor address
     function getStablecoinInvestorByIndex(uint256 _index) external view returns(address) {
         return stablecoinInvestorSet.at(_index);
     }
 
+    /// @notice Only for test.
+    ///         To be deleted before merge to master branch
     function deleteVaultAddressMapForDebug(address _user, address _vaultImpl, uint256 _index) external {
         //delete vaultAddressMap fro debug 
         delete vaultAddressMap[_user][_vaultImpl][_index];
