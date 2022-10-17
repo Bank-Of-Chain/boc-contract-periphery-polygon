@@ -101,7 +101,7 @@ async function check(vaultName, callback, exchangeRewardTokenCallback, uniswapV3
         await _initPriceFeed();
         // init uniswapV3RiskOnHelper
         uniswapV3RiskOnHelper = await UniswapV3RiskOnHelper.new();
-        await uniswapV3RiskOnHelper.initialize(valueInterpreter.address);
+        await uniswapV3RiskOnHelper.initialize();
         // init uniswapV3UsdcWeth500RiskOnVault
         uniswapV3UsdcWeth500RiskOnVault = await UniswapV3UsdcWeth500RiskOnVault.new();
         await uniswapV3UsdcWeth500RiskOnVault.initialize(investor, MFC.USDC_ADDRESS, uniswapV3RiskOnHelper.address, treasury.address, accessControlProxy.address);

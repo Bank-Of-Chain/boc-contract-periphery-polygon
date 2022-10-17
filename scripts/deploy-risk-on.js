@@ -2,14 +2,12 @@ const {
 	ethers
 } = require('hardhat');
 
-const BigNumber = require('bignumber.js');
 const {
 	isEmpty,
 	get,
 	reduce,
 	keys,
-	includes,
-	isEqual
+	includes
 } = require('lodash');
 const inquirer = require('inquirer');
 
@@ -24,17 +22,11 @@ const {
 	deployProxy
 } = require('../utils/deploy-utils');
 
-// === Utils === //
-const VaultContract = hre.artifacts.require("UniswapV3UsdcWeth500RiskOnVault");
-
 // === Constants === //
 const UniswapV3UsdcWeth500RiskOnVault = 'UniswapV3UsdcWeth500RiskOnVault';
 const UniswapV3RiskOnHelper = 'UniswapV3RiskOnHelper';
 const Treasury = 'contracts/riskon/Treasury.sol:Treasury';
-const ValueInterpreter = 'ValueInterpreter';
 const AccessControlProxy = 'AccessControlProxy';
-const ChainlinkPriceFeed = 'ChainlinkPriceFeed';
-const AggregatedDerivativePriceFeed = 'AggregatedDerivativePriceFeed';
 const VaultFactory = 'VaultFactory';
 const USDC_ADDRESS = 'USDC_ADDRESS';
 const WETH_ADDRESS = 'WETH_ADDRESS';
@@ -48,9 +40,6 @@ const addressMap = {
 	}, {}),
 	[UniswapV3UsdcWeth500RiskOnVault]: '',
 	[AccessControlProxy]: '',
-	[ChainlinkPriceFeed]: '',
-	[AggregatedDerivativePriceFeed]: '',
-	[ValueInterpreter]: '',
 	[UniswapV3RiskOnHelper]: '',
 	[Treasury]: '',
 	[VaultFactory]: '',
@@ -220,11 +209,7 @@ const deployProxyBase = async (contractName, depends = []) => {
 }
 
 const main = async () => {
-    let vault;
     let accessControlProxy;
-    let chainlinkPriceFeed;
-    let aggregatedDerivativePriceFeed;
-    let valueInterpreter;
     let treasury;
 
     const network = hre.network.name;
@@ -235,68 +220,20 @@ const main = async () => {
 	const management = accounts[0].address;
 	const keeper = process.env.KEEPER_ACCOUNT_ADDRESS || get(accounts, '19.address', '');
 
-	const owner = accounts[1].address;
-
 	if (isEmpty(addressMap[AccessControlProxy])) {
 		accessControlProxy = await deployProxyBase(AccessControlProxy, [management,management,management,keeper]);
 	}
 
-	if (isEmpty(addressMap[ChainlinkPriceFeed])) {
-		let primitives = new Array();
-		let aggregators = new Array();
-		let heartbeats = new Array();
-		let rateAssets = new Array();
-		for (const key in MFC.CHAINLINK.aggregators) {
-			const value = MFC.CHAINLINK.aggregators[key];
-			primitives.push(value.primitive);
-			aggregators.push(value.aggregator);
-			heartbeats.push(value.heartbeat);
-			rateAssets.push(value.rateAsset);
-		}
-		let basePeggedPrimitives = new Array();
-		let basePeggedRateAssets = new Array();
-		for (const key in MFC.CHAINLINK.basePegged) {
-			const value = MFC.CHAINLINK.basePegged[key];
-			basePeggedPrimitives.push(value.primitive);
-			basePeggedRateAssets.push(value.rateAsset);
-		}
-		chainlinkPriceFeed = await depolyBase(ChainlinkPriceFeed, [
-			MFC.CHAINLINK.ETH_USD_AGGREGATOR,
-			MFC.CHAINLINK.ETH_USD_HEARTBEAT,
-			primitives,
-			aggregators,
-			heartbeats,
-			rateAssets,
-			basePeggedPrimitives,
-			basePeggedRateAssets,
-			AccessControlProxy
-		]);
-	}
-
-	if (isEmpty(addressMap[AggregatedDerivativePriceFeed])) {
-		let derivatives = [];
-		let priceFeeds = [];
-		aggregatedDerivativePriceFeed = await depolyBase(AggregatedDerivativePriceFeed, [derivatives, priceFeeds, AccessControlProxy]);
-	}
-
-	if (isEmpty(addressMap[ValueInterpreter])) {
-		valueInterpreter = await depolyBase(ValueInterpreter, [ChainlinkPriceFeed, AggregatedDerivativePriceFeed, AccessControlProxy]);
-	}
-
 	if (isEmpty(addressMap[UniswapV3RiskOnHelper])) {
-		uniswapV3RiskOnHelper = await deployProxyBase(UniswapV3RiskOnHelper, [ValueInterpreter]);
+		uniswapV3RiskOnHelper = await deployProxyBase(UniswapV3RiskOnHelper, []);
 	}
 
 	if (isEmpty(addressMap[Treasury])) {
-		treasury = await deployProxyBase(
-			Treasury, 
-			[AccessControlProxy,MFC_PRODUCTION.WETH_ADDRESS,MFC_PRODUCTION.USDC_ADDRESS,keeper]
-		);
+		treasury = await deployProxyBase(Treasury, [AccessControlProxy,MFC_PRODUCTION.WETH_ADDRESS,MFC_PRODUCTION.USDC_ADDRESS,keeper]);
 	}
 
 	// only one vault impl now
 	if (isEmpty(addressMap[UniswapV3UsdcWeth500RiskOnVault])) {
-		//initialize(address _owner, address _wantToken, address _uniswapV3RiskOnHelper, address _valueInterpreter)
 		uniswapV3UsdcWeth500RiskOnVaultImpl = await depolyBase(UniswapV3UsdcWeth500RiskOnVault, []);
 	}
 
