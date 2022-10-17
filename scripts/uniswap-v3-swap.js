@@ -2,7 +2,7 @@ const address = require('./../config/address-config');
 const topUp = require('./../utils/top-up-utils');
 const ERC20 = hre.artifacts.require('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20');
 const BigNumber = require('bignumber.js');
-const MockUniswapV3Router = hre.artifacts.require('contracts/usd/mock/MockUniswapV3Router.sol:MockUniswapV3Router');
+const MockUniswapV3Router = hre.artifacts.require('MockUniswapV3Router.sol');
 
 const {
     WETH_ADDRESS,
