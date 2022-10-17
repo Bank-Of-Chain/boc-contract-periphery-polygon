@@ -74,7 +74,7 @@ const main = async () => {
     await advanceBlock(1);
     console.log(`riskOnVault harvest before, estimatedTotalAssets: %d`, new BigNumber(await riskOnVault.estimatedTotalAssets()));
 
-    await riskOnVault.harvest({from: keeper});
+    // await riskOnVault.harvest({from: keeper});
 
     console.log(`riskOnVault harvest after, estimatedTotalAssets: %d`, new BigNumber(await riskOnVault.estimatedTotalAssets()));
 

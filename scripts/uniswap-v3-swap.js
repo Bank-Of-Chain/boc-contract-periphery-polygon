@@ -19,7 +19,7 @@ const main = async () => {
     console.log('swapTokenAddress: ', swapTokenAddress);
     const swapTokenPosition = '0';
     console.log('swapTokenPosition: ', swapTokenPosition);
-    const swapAmount = 1000;
+    const swapAmount = 10000;
     console.log('swapAmount: ', swapAmount);
 
     const accounts = await ethers.getSigners();
