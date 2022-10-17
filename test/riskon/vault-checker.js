@@ -15,12 +15,14 @@ const AggregatedDerivativePriceFeed = hre.artifacts.require('AggregatedDerivativ
 const ValueInterpreter = hre.artifacts.require('ValueInterpreter');
 const UniswapV3UsdcWeth500RiskOnVault = hre.artifacts.require('UniswapV3UsdcWeth500RiskOnVault');
 const UniswapV3RiskOnHelper = hre.artifacts.require('UniswapV3RiskOnHelper');
+const Treasury = hre.artifacts.require('contracts/riskon/Treasury.sol:Treasury');
 const MockUniswapV3Router = hre.artifacts.require('MockUniswapV3Router');
 
 let accessControlProxy;
 let valueInterpreter;
 let uniswapV3UsdcWeth500RiskOnVault;
 let uniswapV3RiskOnHelper;
+let treasury;
 let mockUniswapV3Router;
 
 let governance;
@@ -92,6 +94,9 @@ async function check(vaultName, callback, exchangeRewardTokenCallback, uniswapV3
 
         accessControlProxy = await AccessControlProxy.new();
         await accessControlProxy.initialize(governance, governance, governance, keeper);
+
+        treasury = await Treasury.new();
+        await treasury.initialize(accessControlProxy.address, MFC.WETH_ADDRESS, MFC.USDC_ADDRESS, keeper);
         // init priceFeed
         await _initPriceFeed();
         // init uniswapV3RiskOnHelper
@@ -99,7 +104,7 @@ async function check(vaultName, callback, exchangeRewardTokenCallback, uniswapV3
         await uniswapV3RiskOnHelper.initialize(valueInterpreter.address);
         // init uniswapV3UsdcWeth500RiskOnVault
         uniswapV3UsdcWeth500RiskOnVault = await UniswapV3UsdcWeth500RiskOnVault.new();
-        await uniswapV3UsdcWeth500RiskOnVault.initialize(investor, MFC.USDC_ADDRESS, uniswapV3RiskOnHelper.address);
+        await uniswapV3UsdcWeth500RiskOnVault.initialize(investor, MFC.USDC_ADDRESS, uniswapV3RiskOnHelper.address, treasury.address, accessControlProxy.address);
         console.log('uniswapV3UsdcWeth500RiskOnVault address: %s', uniswapV3UsdcWeth500RiskOnVault.address);
         // init mockUniswapV3Router
         mockUniswapV3Router = await MockUniswapV3Router.new();
@@ -135,7 +140,7 @@ async function check(vaultName, callback, exchangeRewardTokenCallback, uniswapV3
         await uniswapV3UsdcWeth500RiskOnVault.lend(depositedAmount, {from: investor});
         // await advanceBlock(1);
         const estimatedTotalAssets = new BigNumber(await uniswapV3UsdcWeth500RiskOnVault.estimatedTotalAssets());
-        let delta = depositedAmount.minus(estimatedTotalAssets);
+        let delta = depositedAmount.minus(estimatedTotalAssets).minus(depositedAmount.dividedBy(100));
         console.log('depositedAmount: %d, estimatedTotalAssets: %d, delta: %d', depositedAmount, estimatedTotalAssets, delta);
         assert(delta.abs().isLessThan(depositedAmount.multipliedBy(3).dividedBy(10 ** 4)), 'estimatedTotalAssets does not match depositedAmount value');
     });
@@ -158,12 +163,13 @@ async function check(vaultName, callback, exchangeRewardTokenCallback, uniswapV3
         if (callback) {
             await callback(uniswapV3UsdcWeth500RiskOnVault.address, keeper);
         }
-        await advanceBlock(3);
+        // await advanceBlock(3);
         pendingRewards = await uniswapV3UsdcWeth500RiskOnVault.harvest.call({from: keeper});
         await uniswapV3UsdcWeth500RiskOnVault.harvest({from: keeper});
         const claimAmounts = pendingRewards._claimAmounts;
         for (let i = 0; i < claimAmounts.length; i++) {
             const claimAmount = claimAmounts[i];
+            console.log('harvest claimAmount[%d]: %d', i, claimAmount);
             if (claimAmount > 0) {
                 produceReward = true;
             }

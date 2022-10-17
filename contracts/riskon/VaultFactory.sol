@@ -17,6 +17,8 @@ contract VaultFactory is AccessControlMixin, ReentrancyGuardUpgradeable{
 
     address public uniswapV3RiskOnHelper;
 
+    address public treasury;
+
     // @notice key is vaultImpl and value is an index of vaultImplList
     mapping(address => uint256) public vaultImpl2Index;
 
@@ -37,8 +39,8 @@ contract VaultFactory is AccessControlMixin, ReentrancyGuardUpgradeable{
     constructor(
         address[] memory _vaultImplList,
         address _accessControlProxy,
-        address _uniswapV3RiskOnHelper
-
+        address _uniswapV3RiskOnHelper,
+        address _treasury
     ){
         _initAccessControl(_accessControlProxy);
 
@@ -48,6 +50,7 @@ contract VaultFactory is AccessControlMixin, ReentrancyGuardUpgradeable{
         }
 
         uniswapV3RiskOnHelper = _uniswapV3RiskOnHelper;
+        treasury = _treasury;
     }
 
     /// @notice Create new vault by the clone factory pattern
@@ -59,14 +62,14 @@ contract VaultFactory is AccessControlMixin, ReentrancyGuardUpgradeable{
         uint256 index = 0;
         if(_wantToken == USDC_ADDRESS) index = 1;
         require(vaultAddressMap[msg.sender][_vaultImpl][index] == address(0), 'Already created');
-        
+
         //Creating a new vault contract
         IUniswapV3RiskOnVaultInitialize newVault = IUniswapV3RiskOnVaultInitialize(Clones.clone(_vaultImpl));
 
         // since the clone create a proxy, the constructor is redundant and you have to use the initialize function
-        newVault.initialize(msg.sender, _wantToken, uniswapV3RiskOnHelper);
+        newVault.initialize(msg.sender, _wantToken, uniswapV3RiskOnHelper, treasury, address(accessControlProxy));
 
-        emit CreateNewVault(msg.sender,address(newVault), _wantToken);
+        emit CreateNewVault(msg.sender, address(newVault), _wantToken);
 
         //Add the new vault to total vault list
         totalVaultAddrList.push(newVault);
@@ -93,5 +96,5 @@ contract VaultFactory is AccessControlMixin, ReentrancyGuardUpgradeable{
 
     function getTotalVaultAddrList() external view returns(IUniswapV3RiskOnVaultInitialize[] memory) {
         return totalVaultAddrList;
-    } 
+    }
 }

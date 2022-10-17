@@ -16,6 +16,8 @@ interface IUniswapV3RiskOnVault {
     /// @param _shutdown The new boolean value of the emergency shutdown switch
     event SetEmergencyShutdown(bool _shutdown);
 
+    event ProfitFeeBpsChanged(uint256 _basis);
+
     /// @param _rewardTokens The reward tokens
     /// @param _claimAmounts The claim amounts
     event StrategyReported(address[] _rewardTokens, uint256[] _claimAmounts);
@@ -31,7 +33,7 @@ interface IUniswapV3RiskOnVault {
 
     /// @notice Version of strategy
     function getVersion() external pure returns (string memory);
-    
+
     /// @notice Emergency shutdown
     function emergencyShutdown() external view returns (bool);
 

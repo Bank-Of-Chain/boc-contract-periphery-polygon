@@ -9,14 +9,13 @@ contract UniswapV3UsdcWeth500RiskOnVault is IUniswapV3RiskOnVaultInitialize, Uni
     /// @notice  name
     string public name = 'UniswapV3UsdcWeth500';
 
-    function initialize(address _owner, address _wantToken, address _uniswapV3RiskOnHelper) public override initializer {
-        super.initialize(
+    function initialize(address _owner, address _wantToken, address _uniswapV3RiskOnHelper, address _treasury, address _accessControlProxy) public override initializer {
+        super._initialize(
             _owner,
             _wantToken,
         // https://info.uniswap.org/#/polygon/pools/0x45dda9cb7c25131df268515131f647d726f50608
             address(0x45dDa9cb7c25131DF268515131f647d726f50608),
             2,
-            _uniswapV3RiskOnHelper,
             3600,
             1200,
         // ~12 hours
@@ -26,7 +25,10 @@ contract UniswapV3UsdcWeth500RiskOnVault is IUniswapV3RiskOnVaultInitialize, Uni
             100,
         // 60 seconds
             60,
-            10
+            10,
+            _uniswapV3RiskOnHelper,
+            _treasury,
+            _accessControlProxy
         );
     }
 }

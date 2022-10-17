@@ -34,7 +34,7 @@ describe('【UniswapV3UsdcWeth500RiskOnVault Vault Checker】', function () {
         wantTokenContract.approve(mockUniswapV3Router.address, new BigNumber(10).pow(6).multipliedBy(new BigNumber(10).pow(wantTokenDecimals)), {from: investor});
         await mockUniswapV3Router.swap("0x45dDa9cb7c25131DF268515131f647d726f50608", true, new BigNumber(10).pow(6).multipliedBy(new BigNumber(10).pow(wantTokenDecimals)), {"from": investor});
 
-        await advanceBlock(1);
+        // await advanceBlock(1);
         twap = new BigNumber(await uniswapV3UsdcWeth500RiskOnVault.getTwap());
         console.log('after swap twap: %s', twap.toFixed());
 
@@ -50,7 +50,7 @@ describe('【UniswapV3UsdcWeth500RiskOnVault Vault Checker】', function () {
         wantTokenContract.approve(mockUniswapV3Router.address, new BigNumber(10).pow(6).multipliedBy(new BigNumber(10).pow(wantTokenDecimals)), {from: investor});
         await mockUniswapV3Router.swap("0x45dDa9cb7c25131DF268515131f647d726f50608", true, new BigNumber(10).pow(6).multipliedBy(new BigNumber(10).pow(wantTokenDecimals)), {"from": investor});
 
-        await advanceBlock(1);
+        // await advanceBlock(1);
 
         twap = new BigNumber(await uniswapV3UsdcWeth500RiskOnVault.getTwap());
         console.log('after rebalance swap twap: %s', twap.toFixed());

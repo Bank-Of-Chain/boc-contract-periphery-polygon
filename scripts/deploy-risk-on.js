@@ -302,7 +302,7 @@ const main = async () => {
 
 	// can use multi vault impl on VaultFactory
 	if (isEmpty(addressMap[VaultFactory])) {
-		vaultFactory = await depolyBase(VaultFactory, [[addressMap[UniswapV3UsdcWeth500RiskOnVault]],AccessControlProxy,UniswapV3RiskOnHelper]);
+		vaultFactory = await depolyBase(VaultFactory, [[addressMap[UniswapV3UsdcWeth500RiskOnVault]], AccessControlProxy, UniswapV3RiskOnHelper, Treasury]);
 	}
 
 	console.table(addressMap);

@@ -33,7 +33,7 @@ contract UniswapV3RiskOnHelper is Initializable {
     uint256 internal constant AAVE_BASE_CURRENCY_UNIT = 10 ** 8;
     uint256 internal constant VALUE_INTERPRETER_PRICE_BASE_UNIT = 10 ** 18;
 
-    IValueInterpreter internal valueInterpreter;
+    IValueInterpreter public valueInterpreter;
 
     /// @notice Initialize this contract
     /// @param _valueInterpreter The value interpreter

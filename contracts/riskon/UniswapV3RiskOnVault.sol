@@ -23,6 +23,7 @@ import "../utils/actions/UniswapV3LiquidityActionsMixin.sol";
 import "./UniswapV3RiskOnHelper.sol";
 import "../../library/RiskOnConstant.sol";
 import "./IUniswapV3RiskOnVault.sol";
+import './ITreasury.sol';
 
 /// @title UniswapV3RiskOnVault
 /// @author Bank of Chain Protocol Inc
@@ -35,6 +36,12 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
 
     /// @notice  net market making amount
     uint256 public override netMarketMakingAmount;
+
+    // @notice  amount of manage fee in basis points
+    uint256 public manageFeeBps;
+
+    // @notice  amount of yield collected in basis points
+    uint256 public profitFeeBps;
 
     address internal owner;
     address public wantToken;
@@ -50,13 +57,13 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
     MintInfo internal baseMintInfo;
     MintInfo internal limitMintInfo;
     UniswapV3RiskOnHelper internal uniswapV3RiskOnHelper;
+    ITreasury internal treasury;
 
     /// @notice Initialize this contract
     /// @param _owner The owner
     /// @param _wantToken The want token
     /// @param _pool The uniswap V3 pool
     /// @param _interestRateMode The interest rate mode
-    /// @param _uniswapV3RiskOnHelper The uniswap v3 helper
     /// @param _baseThreshold The new base threshold
     /// @param _limitThreshold The new limit threshold
     /// @param _period The new period
@@ -64,24 +71,31 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
     /// @param _maxTwapDeviation The max TWAP deviation
     /// @param _twapDuration The max TWAP duration
     /// @param _tickSpacing The tick spacing
-    function initialize(
+    /// @param _uniswapV3RiskOnHelper The uniswap v3 helper
+    /// @param _treasury The treasury
+    /// @param _accessControlProxy The access control proxy address
+    function _initialize(
         address _owner,
         address _wantToken,
         address _pool,
         uint256 _interestRateMode,
-        address _uniswapV3RiskOnHelper,
         int24 _baseThreshold,
         int24 _limitThreshold,
         uint256 _period,
         int24 _minTickMove,
         int24 _maxTwapDeviation,
         uint32 _twapDuration,
-        int24 _tickSpacing
+        int24 _tickSpacing,
+        address _uniswapV3RiskOnHelper,
+        address _treasury,
+        address _accessControlProxy
     ) internal {
         super._initializeUniswapV3Liquidity(_pool);
         wantToken = _wantToken;
         super.__initLendConfigation(_interestRateMode, wantToken, wantToken == token0 ? token1 : token0);
         owner = _owner;
+        manageFeeBps = 100;
+        profitFeeBps = 0;
         baseThreshold = _baseThreshold;
         limitThreshold = _limitThreshold;
         period = _period;
@@ -90,6 +104,8 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
         twapDuration = _twapDuration;
         tickSpacing = _tickSpacing;
         uniswapV3RiskOnHelper = UniswapV3RiskOnHelper(_uniswapV3RiskOnHelper);
+        treasury = ITreasury(_treasury);
+        _initAccessControl(_accessControlProxy);
     }
 
     /// @notice Return the version of strategy
@@ -170,17 +186,38 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
             _claimAmounts[0] += _amount0;
             _claimAmounts[1] += _amount1;
         }
-
         if (limitMintInfo.tokenId > 0) {
             (_amount0, _amount1) = __collectAll(limitMintInfo.tokenId);
             _claimAmounts[0] += _amount0;
             _claimAmounts[1] += _amount1;
+        }
+
+        if (profitFeeBps > 0 && address(treasury) != address(0)) {
+            if (_claimAmounts[0] > 0) {
+                uint256 claimAmount0Fee = _claimAmounts[0] * profitFeeBps / 10000;
+                _claimAmounts[0] -= claimAmount0Fee;
+                IERC20Upgradeable(token0).safeTransfer(address(treasury), claimAmount0Fee);
+            }
+            if (_claimAmounts[1] > 0) {
+                uint256 claimAmount1Fee = _claimAmounts[1] * profitFeeBps / 10000;
+                _claimAmounts[1] -= claimAmount1Fee;
+                IERC20Upgradeable(token1).safeTransfer(address(treasury), claimAmount1Fee);
+            }
         }
         emit StrategyReported(_rewardsTokens, _claimAmounts);
     }
 
     function lend(uint256 _amount) external isOwner whenNotEmergency nonReentrant override {
         IERC20Upgradeable(wantToken).safeTransferFrom(msg.sender, address(this), _amount);
+
+        if (manageFeeBps > 0 && address(treasury) != address(0)) {
+            uint256 manageFee = _amount * manageFeeBps / 10000;
+            IERC20Upgradeable(wantToken).safeApprove(address(treasury), 0);
+            IERC20Upgradeable(wantToken).safeApprove(address(treasury), manageFee);
+            treasury.receiveManageFeeFromVault(wantToken, manageFee);
+            _amount -= manageFee;
+        }
+
         __addCollateral(_amount.mul(2).div(3));
         __borrow(uniswapV3RiskOnHelper.calcCanonicalAssetValue(wantToken, _amount.div(3), borrowToken));
         (, int24 _tick,,,,,) = pool.slot0();
@@ -308,7 +345,7 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
         }
     }
 
-    function borrowRebalance() external whenNotEmergency nonReentrant override {
+    function borrowRebalance() external whenNotEmergency nonReentrant override isKeeper {
         (uint256 _totalCollateral, uint256 _totalDebt, , , ,) = uniswapV3RiskOnHelper.borrowInfo(address(this));
 
         if (_totalDebt.mul(10000).div(_totalCollateral) >= 7500) {
@@ -355,7 +392,7 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
 
     /// @notice Rebalance the position of this strategy
     /// Requirements: only keeper can call
-    function rebalanceByKeeper() external whenNotEmergency nonReentrant override {
+    function rebalanceByKeeper() external whenNotEmergency nonReentrant override isKeeper {
         (, int24 _tick,,,,,) = pool.slot0();
         require(shouldRebalance(_tick), "NR");
         rebalance(_tick);
@@ -524,6 +561,20 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
     function setEmergencyShutdown(bool _active) external isVaultManager override {
         emergencyShutdown = _active;
         emit SetEmergencyShutdown(_active);
+    }
+
+    /// @dev Sets the manageFeeBps to the percentage of deposit that should be received in basis points.
+    function setManageFeeBps(uint256 _basis) external isVaultManager {
+        require(_basis <= 10, "basis cannot exceed 10%");
+        profitFeeBps = _basis;
+        emit ProfitFeeBpsChanged(_basis);
+    }
+
+    /// @dev Sets the profitFeeBps to the percentage of yield that should be received in basis points.
+    function setProfitFeeBps(uint256 _basis) external isVaultManager {
+        require(_basis <= 5000, "basis cannot exceed 50%");
+        profitFeeBps = _basis;
+        emit ProfitFeeBpsChanged(_basis);
     }
 
     modifier isOwner() {
