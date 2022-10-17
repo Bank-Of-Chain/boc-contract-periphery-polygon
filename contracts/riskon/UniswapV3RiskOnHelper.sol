@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
+import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
@@ -12,7 +13,6 @@ import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import '@uniswap/v3-core/contracts/interfaces/IERC20Minimal.sol';
 import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 import '@uniswap/v3-core/contracts/libraries/SqrtPriceMath.sol';
-import "boc-contract-core/contracts/price-feeds/IValueInterpreter.sol";
 import "boc-contract-core/contracts/access-control/AccessControlMixin.sol";
 import "./../external/uniswap/IUniswapV3.sol";
 import './../external/uniswapv3/INonfungiblePositionManager.sol';
@@ -33,15 +33,12 @@ contract UniswapV3RiskOnHelper is Initializable {
     uint256 internal constant AAVE_BASE_CURRENCY_UNIT = 10 ** 8;
     uint256 internal constant VALUE_INTERPRETER_PRICE_BASE_UNIT = 10 ** 18;
 
-    IValueInterpreter public valueInterpreter;
+    ILendingPoolAddressesProvider internal constant lendingPoolAddressesProvider = ILendingPoolAddressesProvider(0xa97684ead0e402dC232d5A977953DF7ECBaB3CDb);
+    IPriceOracleGetter internal priceOracleGetter;
 
     /// @notice Initialize this contract
-    /// @param _valueInterpreter The value interpreter
-    function initialize(
-        address _valueInterpreter
-    ) public initializer {
-        console.log('----------------_initialize _valueInterpreter: %s', _valueInterpreter);
-        valueInterpreter = IValueInterpreter(_valueInterpreter);
+    function initialize() public initializer {
+        priceOracleGetter = IPriceOracleGetter(lendingPoolAddressesProvider.getPriceOracle());
     }
 
     /// @notice Gets the specifie ranges of `_tick`
@@ -75,7 +72,7 @@ contract UniswapV3RiskOnHelper is Initializable {
 
     function getTotalCollateralTokenAmount(address _account, address _collateralToken) public view returns (uint256 _totalCollateralToken) {
         (uint256 _totalCollateralBase,,,,,) = borrowInfo(_account);
-        _totalCollateralToken = _totalCollateralBase.mul(10 ** uint256(ERC20(_collateralToken).decimals())).mul(VALUE_INTERPRETER_PRICE_BASE_UNIT).div(valueInterpreter.price(_collateralToken)).div(AAVE_BASE_CURRENCY_UNIT);
+        _totalCollateralToken = _totalCollateralBase.mul(decimalUnitOfToken(_collateralToken)).div(priceOracleGetter.getAssetPrice(_collateralToken));
     }
 
     function getAToken(address _asset) public view returns (address) {
@@ -96,6 +93,14 @@ contract UniswapV3RiskOnHelper is Initializable {
     }
 
     function calcCanonicalAssetValue(address _baseAsset, uint256 _amount, address _quoteAsset) public view returns (uint256) {
-        return valueInterpreter.calcCanonicalAssetValue(_baseAsset, _amount, _quoteAsset);
+        address[] memory assets = new address[](2);
+        assets[0] = _baseAsset;
+        assets[1] = _quoteAsset;
+        uint256[] memory prices = priceOracleGetter.getAssetsPrices(assets);
+        return _amount.mul(prices[0]).mul(decimalUnitOfToken(_quoteAsset)).div(prices[1]).div(decimalUnitOfToken(_baseAsset));
+    }
+
+    function decimalUnitOfToken(address _token) internal view returns (uint256){
+        return 10 ** IERC20MetadataUpgradeable(_token).decimals();
     }
 }
