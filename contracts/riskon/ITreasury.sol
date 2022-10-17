@@ -44,8 +44,4 @@ interface ITreasury {
     /// @param _profitAmount The profit amount
     function receiveProfitFromVault(address _token, uint256 _profitAmount) external;
 
-    /// @notice Sets the flag of taking profit
-    /// @param _newFlag The new flag
-    function setTakeProfitFlag (bool _newFlag) external;
-
 }

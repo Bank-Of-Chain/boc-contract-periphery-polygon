@@ -48,7 +48,13 @@ interface IUniswapV3RiskOnVault {
 
     /// @notice Total assets
     function estimatedTotalAssets() external view returns (uint256 _totalAssets);
+    
+    /// @notice Get token0 address of uniswap V3 pool invested by this vault
+    function token0() external pure returns (address);
 
+    /// @notice Get token1 address of uniswap V3 pool invested by this vault
+    function token1() external pure returns (address);
+    
     /// @notice Harvests the Strategy
     function harvest() external returns (address[] memory _rewardsTokens, uint256[] memory _claimAmounts);
 

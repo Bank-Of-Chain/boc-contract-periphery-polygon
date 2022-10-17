@@ -116,10 +116,11 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
         return "1.0.0";
     }
 
-    /// @notice Return the version of strategy
-    function token0() public pure virtual returns (address);
+    // /// @notice Get token0 address of uniswap V3 pool invested by this vault
+    function token0() public pure override virtual returns (address);
 
-    function token1() public pure virtual returns (address);
+    // /// @notice Get token1 address of uniswap V3 pool invested by this vault
+    function token1() public pure override virtual returns (address);
 
     /// @notice Gets the statuses about uniswap V3
     /// @return _owner The owner

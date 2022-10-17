@@ -2,15 +2,18 @@
 pragma solidity ^0.8.0;
 
 import { Clones } from '@openzeppelin/contracts/proxy/Clones.sol';
-import "boc-contract-core/contracts/access-control/AccessControlMixin.sol";
-import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import 'boc-contract-core/contracts/access-control/AccessControlMixin.sol';
+import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
 import './IUniswapV3RiskOnVaultInitialize.sol';
-import "boc-contract-core/contracts/library/BocRoles.sol";
+import './IUniswapV3RiskOnVault.sol';
+import 'boc-contract-core/contracts/library/BocRoles.sol';
+import '../../library/RiskOnConstant.sol';
 
-contract VaultFactory is AccessControlMixin, ReentrancyGuardUpgradeable{
+contract VaultFactory is Initializable, AccessControlMixin, ReentrancyGuardUpgradeable{
 
-    address public constant WETH_ADDRESS = 0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619;
-    address public constant USDC_ADDRESS = 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174;
+    using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
 
     /// @notice The address list of vault implementation contract
     address[] public vaultImplList;
@@ -29,6 +32,9 @@ contract VaultFactory is AccessControlMixin, ReentrancyGuardUpgradeable{
     // user1 => UniswapV3UsdcWeth500RiskOnVault（基础合约地址） => VaultList[2] == [wethVault,usdcVault]
     mapping(address => mapping(address => address[2])) public vaultAddressMap;
 
+    EnumerableSetUpgradeable.AddressSet internal wethInvestorSet;
+    EnumerableSetUpgradeable.AddressSet internal stablecoinInvestorSet;
+
     /// @param _owner The owner of new vault
     /// @param _newVault The new vault created
     /// @param _wantToken The token wanted by this new  vault
@@ -36,12 +42,15 @@ contract VaultFactory is AccessControlMixin, ReentrancyGuardUpgradeable{
 
     /// @notice constructor
     /// @param _vaultImplList The address list of implementation contract 
-    constructor(
+    /// @param _accessControlProxy The address of access control proxy contract
+    /// @param _uniswapV3RiskOnHelper The address of 'UniswapV3RiskOnHelper' contract
+    /// @param _treasury The address of Treasury
+    function initialize(
         address[] memory _vaultImplList,
         address _accessControlProxy,
         address _uniswapV3RiskOnHelper,
         address _treasury
-    ){
+    ) public initializer {
         _initAccessControl(_accessControlProxy);
 
         for(uint256 i = 0; i < _vaultImplList.length; i++) {
@@ -53,15 +62,24 @@ contract VaultFactory is AccessControlMixin, ReentrancyGuardUpgradeable{
         treasury = _treasury;
     }
 
+    receive() external payable {}
+
+    fallback() external payable {}
+
     /// @notice Create new vault by the clone factory pattern
     /// @param _wantToken The token wanted by this new vault
     /// @param _vaultImpl The vault implementation to create new vault proxy
     function createNewVault(address _wantToken, address _vaultImpl) public nonReentrant{
-        require(_wantToken == WETH_ADDRESS || _wantToken == USDC_ADDRESS,'The wantToken is not WETH or USDC');
+        
+        require(
+            _wantToken == IUniswapV3RiskOnVault(_vaultImpl).token0() || 
+            _wantToken == IUniswapV3RiskOnVault(_vaultImpl).token1(),
+            'The wantToken is not WETH or stablecoin'
+        );
         require(vaultImpl2Index[_vaultImpl] > 0,'Vault Impl is invalid');
-        uint256 index = 0;
-        if(_wantToken == USDC_ADDRESS) index = 1;
-        require(vaultAddressMap[msg.sender][_vaultImpl][index] == address(0), 'Already created');
+        uint256 _index = 0;
+        if(_wantToken != RiskOnConstant.WETH) _index = 1;
+        require(vaultAddressMap[msg.sender][_vaultImpl][_index] == address(0), 'Already created');
 
         //Creating a new vault contract
         IUniswapV3RiskOnVaultInitialize newVault = IUniswapV3RiskOnVaultInitialize(Clones.clone(_vaultImpl));
@@ -74,8 +92,14 @@ contract VaultFactory is AccessControlMixin, ReentrancyGuardUpgradeable{
         //Add the new vault to total vault list
         totalVaultAddrList.push(newVault);
 
+        if(_index == 0) {
+            if(!wethInvestorSet.contains(msg.sender)) wethInvestorSet.add(msg.sender);
+        }else {//_index == 1
+            if(!stablecoinInvestorSet.contains(msg.sender)) stablecoinInvestorSet.add(msg.sender);
+        }
+
         //Add the new vault to user vault list 
-        vaultAddressMap[msg.sender][_vaultImpl][index] = address(newVault);
+        vaultAddressMap[msg.sender][_vaultImpl][_index] = address(newVault);
     }
 
     /// @notice Add new vault implementation
@@ -86,7 +110,7 @@ contract VaultFactory is AccessControlMixin, ReentrancyGuardUpgradeable{
         vaultImpl2Index[_vaultImpl] = vaultImplList.length;
     }
 
-    function getVaultsLen() public view returns(uint256){
+    function getVaultsLen() external view returns(uint256){
         return totalVaultAddrList.length;
     }
 
@@ -96,5 +120,28 @@ contract VaultFactory is AccessControlMixin, ReentrancyGuardUpgradeable{
 
     function getTotalVaultAddrList() external view returns(IUniswapV3RiskOnVaultInitialize[] memory) {
         return totalVaultAddrList;
+    }
+
+    function getTwoInvestorlist() external view returns(address[] memory _wethInvestorSet,address[] memory _usdInvestorSet){
+        _wethInvestorSet = wethInvestorSet.values();
+        _usdInvestorSet = stablecoinInvestorSet.values();
+    }
+
+    function getTwoInvestorlistLen() external view returns(uint256 _wethInvestorSetLen,uint256 _stablecoinInvestorSetLen){
+        _wethInvestorSetLen = wethInvestorSet.length();
+        _stablecoinInvestorSetLen = stablecoinInvestorSet.length();
+    }
+
+    function getWethInvestorByIndex(uint256 _index) external view returns(address) {
+        return wethInvestorSet.at(_index);
+    }
+
+    function getStablecoinInvestorByIndex(uint256 _index) external view returns(address) {
+        return stablecoinInvestorSet.at(_index);
+    }
+
+    function deleteVaultAddressMapForDebug(address _user, address _vaultImpl, uint256 _index) external {
+        //delete vaultAddressMap fro debug 
+        delete vaultAddressMap[_user][_vaultImpl][_index];
     }
 }

@@ -33,9 +33,6 @@ contract Treasury is
     // token => bool
     mapping(address => bool) public isReceivableToken;
 
-    /// @notice The flag of taking profit
-    bool public takeProfitFlag;
-
     /// @notice The keeper to receive manage fee
     address payable public keeper;
 
@@ -149,18 +146,10 @@ contract Treasury is
     /// @inheritdoc ITreasury
     function receiveProfitFromVault(address _token, uint256 _profitAmount) external override {
         require(isReceivableToken[_token],'Not receivable token');
-        if(takeProfitFlag) {
-            IERC20Upgradeable(_token).safeTransferFrom(msg.sender, address(this), _profitAmount);
-            accVaultProfit[msg.sender][_token] += _profitAmount;
-            emit ReceiveProfit(msg.sender, _token, _profitAmount); 
-        }
-    }
-
-    /// Requirements: only governance role can call
-    /// @inheritdoc ITreasury
-    function setTakeProfitFlag (bool _newFlag) external override onlyRole(BocRoles.GOV_ROLE){
-        takeProfitFlag = _newFlag;
-        emit TakeProfitFlagChanged(_newFlag);
+        IERC20Upgradeable(_token).safeTransferFrom(msg.sender, address(this), _profitAmount);
+        accVaultProfit[msg.sender][_token] += _profitAmount;
+        emit ReceiveProfit(msg.sender, _token, _profitAmount);
+        
     }
 
     /// @notice Sets `_token` is receivable token or not

@@ -74,12 +74,7 @@ describe('Treasury', () => {
 
      it('receiveProfitFromVault', async () => {
       let transferAmount = ethers.BigNumber.from(10).pow(18).mul(1000);
-      // when takeProfitFlag is false, receive 0 from vault
-      await this.treasury.receiveProfitFromVault(this.wethMock.address,transferAmount);
 
-      // set takeProfitFlag is true
-      await this.treasury.setTakeProfitFlag(true);
-      expect(await this.treasury.takeProfitFlag()).to.be.equal(true);
       await this.wethMock.approve(this.treasury.address,transferAmount);
       await this.treasury.receiveProfitFromVault(this.wethMock.address,transferAmount);
       expect(await this.treasury.accVaultProfit(this.deployer.address,this.wethMock.address)).to.be.equal(transferAmount);
@@ -130,13 +125,6 @@ describe('Treasury', () => {
          
       })
 
-     it('setTakeProfitFlag', async () => {
-        expect(await this.treasury.takeProfitFlag()).to.be.equal(false);
-        // set takeProfitFlag is true
-        await this.treasury.setTakeProfitFlag(true);
-        expect(await this.treasury.takeProfitFlag()).to.be.equal(true);
-     })
-
      it('setIsReceivableToken', async () => {
         expect(await this.treasury.isReceivableToken(this.newReceivableToken.address)).to.be.equal(false);
         // add new receivable token 
@@ -146,8 +134,6 @@ describe('Treasury', () => {
 
      it('withdrawToken', async () => {
           let transferAmount = ethers.BigNumber.from(10).pow(18).mul(1000);
-          // set takeProfitFlag is true
-          await this.treasury.setTakeProfitFlag(true);
           await this.wethMock.approve(this.treasury.address,transferAmount);
           await this.treasury.receiveProfitFromVault(this.wethMock.address,transferAmount);
           
