@@ -1,25 +1,24 @@
-const address = require('./../config/address-config');
-const topUp = require('./../utils/top-up-utils');
+const address = require('../../config/address-config');
+const topUp = require('../../utils/top-up-utils');
 const ERC20 = hre.artifacts.require('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20');
 const BigNumber = require('bignumber.js');
 const MockUniswapV3Router = hre.artifacts.require('MockUniswapV3Router.sol');
 
 const {
-    WETH_ADDRESS,
-    USDC_ADDRESS,
-} = require('../config/mainnet-fork-test-config');
+    WETH_ADDRESS
+} = require('../../config/mainnet-fork-test-config');
 
 const main = async () => {
     const network = hre.network.name;
-    console.log('\n\n 📡 uniswapv3 swap ... At %s Network \n', network);
+    console.log('\n\n 📡 mock uniswapv3 weth swap ... At %s Network \n', network);
 
     const swapPoolAddress = '0x45dDa9cb7c25131DF268515131f647d726f50608';
     console.log('swapPoolAddress: ', swapPoolAddress);
-    const swapTokenAddress = USDC_ADDRESS;
+    const swapTokenAddress = WETH_ADDRESS;
     console.log('swapTokenAddress: ', swapTokenAddress);
-    const swapTokenPosition = '0';
+    const swapTokenPosition = '1';
     console.log('swapTokenPosition: ', swapTokenPosition);
-    const swapAmount = 10000;
+    const swapAmount = 100;
     console.log('swapAmount: ', swapAmount);
 
     const accounts = await ethers.getSigners();
@@ -30,10 +29,10 @@ const main = async () => {
     let swapTokenDecimals = await swapToken.decimals();
     await topUpSwapAmount(swapTokenAddress, swapAmount, investor);
 
-    let swapTokenBalance = new BigNumber(await swapToken.balanceOf(investor));
-    console.log('swapTokenBalance: ', swapTokenBalance.toFixed());
+    console.log('swapBeforeTokenBalance: %d', new BigNumber(await swapToken.balanceOf(investor)).toFixed());
     await swapToken.approve(mockUniswapV3Router.address, new BigNumber(swapAmount).multipliedBy(new BigNumber(10).pow(swapTokenDecimals)), {"from": investor});
     await mockUniswapV3Router.swap(swapPoolAddress, swapTokenPosition === '0', new BigNumber(swapAmount).multipliedBy(new BigNumber(10).pow(swapTokenDecimals)), {"from": investor});
+    console.log('swapAfterTokenBalance: %d', new BigNumber(await swapToken.balanceOf(investor)).toFixed());
     console.log('swap finish!!!');
 
     async function topUpSwapAmount(tokenAddress, tokenAmount, investor) {

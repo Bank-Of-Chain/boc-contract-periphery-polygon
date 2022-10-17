@@ -1,9 +1,9 @@
 const {default: BigNumber} = require('bignumber.js');
-const address = require('./../config/address-config');
-const topUp = require('./../utils/top-up-utils');
+const address = require('../../config/address-config');
+const topUp = require('../../utils/top-up-utils');
 const {
     advanceBlock
-} = require('../utils/block-utils');
+} = require('../../utils/block-utils');
 
 const VaultFactory = hre.artifacts.require('VaultFactory.sol');
 const RiskOnVault = hre.artifacts.require('UniswapV3UsdcWeth500RiskOnVault.sol');
@@ -11,18 +11,16 @@ const MockUniswapV3Router = hre.artifacts.require('MockUniswapV3Router.sol');
 const ERC20 = hre.artifacts.require('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20');
 
 const {
-    WETH_ADDRESS,
-    USDC_ADDRESS,
-} = require('../config/mainnet-fork-test-config');
+    USDC_ADDRESS
+} = require('../../config/mainnet-fork-test-config');
 
-const vaultFactoryAddress = '0xcd34D0833406Bff8073e18AAFa3DC34EE48Df9BA';
-const riskOnVaultBaseAddress = '0x8013Dd64084e9c9122567563AA86981F4C20576B';
-const mockUniswapV3RouterAddress = '0x12087c013f6269A90F113F8935f51C713a09b173';
+const vaultFactoryAddress = '0x4054765d35be9b4b27C4A1db3B269ae40f0541Ad';
+const riskOnVaultBaseAddress = '0xFdc146E92D892F326CB9a1A480f58fc30a766c98';
 const poolAddress = '0x45dDa9cb7c25131DF268515131f647d726f50608';
 
 const main = async () => {
     const network = hre.network.name;
-    console.log('\n\n 📡 simple lend ... At %s Network \n', network);
+    console.log('\n\n 📡 risk on main process ... At %s Network \n', network);
     if (network !== 'localhost') {
         return;
     }
@@ -52,7 +50,7 @@ const main = async () => {
     await riskOnVault.lend(wantTokenAmount, {from: investor});
     console.log(`riskOnVault lend successfully, estimatedTotalAssets: %d`, new BigNumber(await riskOnVault.estimatedTotalAssets()));
 
-    await advanceBlock(1);
+    // await advanceBlock(1);
 
     let swapTokenAddress = wantToken;
     console.log('swapTokenAddress: ', swapTokenAddress);
@@ -71,7 +69,7 @@ const main = async () => {
     console.log('swapAmount: ', swapAmount);
     await swap(swapTokenAddress, swapTokenPosition, swapAmount, investor);
 
-    await advanceBlock(1);
+    // await advanceBlock(1);
     console.log(`riskOnVault harvest before, estimatedTotalAssets: %d`, new BigNumber(await riskOnVault.estimatedTotalAssets()));
 
     // await riskOnVault.harvest({from: keeper});
@@ -79,7 +77,7 @@ const main = async () => {
     console.log(`riskOnVault harvest after, estimatedTotalAssets: %d`, new BigNumber(await riskOnVault.estimatedTotalAssets()));
 
     async function swap(swapTokenAddress, swapTokenPosition, swapAmount, investor) {
-        const mockUniswapV3Router = await MockUniswapV3Router.at(mockUniswapV3RouterAddress);
+        const mockUniswapV3Router = await MockUniswapV3Router.new();
 
         let swapToken = await ERC20.at(swapTokenAddress);
         let swapTokenDecimals = await swapToken.decimals();
@@ -87,7 +85,8 @@ const main = async () => {
 
         let swapTokenBalance = new BigNumber(await swapToken.balanceOf(investor));
         console.log('swapTokenBalance: ', swapTokenBalance.toFixed());
-        await swapToken.approve(mockUniswapV3RouterAddress, new BigNumber(swapAmount).multipliedBy(new BigNumber(10).pow(swapTokenDecimals)), {"from": investor});
+
+        await swapToken.approve(mockUniswapV3Router.address, new BigNumber(swapAmount).multipliedBy(new BigNumber(10).pow(swapTokenDecimals)), {"from": investor});
         await mockUniswapV3Router.swap(poolAddress, swapTokenPosition === '0', new BigNumber(swapAmount).multipliedBy(new BigNumber(10).pow(swapTokenDecimals)), {"from": investor});
         console.log('swap finish!!!');
     }
