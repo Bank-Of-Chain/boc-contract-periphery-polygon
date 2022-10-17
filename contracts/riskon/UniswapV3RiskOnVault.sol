@@ -37,6 +37,9 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
     /// @notice  net market making amount
     uint256 public override netMarketMakingAmount;
 
+    // @notice  last harvest timestamp
+    uint256 public lastHarvest;
+
     // @notice  amount of manage fee in basis points
     uint256 public manageFeeBps;
 
@@ -175,6 +178,7 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
     /// @return  _rewardsTokens The reward tokens list
     /// @return _claimAmounts The claim amounts list
     function harvest() public override returns (address[] memory _rewardsTokens, uint256[] memory _claimAmounts) {
+        lastReport = block.timestamp;
         _rewardsTokens = new address[](2);
         _rewardsTokens[0] = token0;
         _rewardsTokens[1] = token1;
