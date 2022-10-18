@@ -221,6 +221,8 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
         emit StrategyReported(_rewardsTokens, _claimAmounts);
     }
 
+    /// @notice Lend
+    /// @param _amount The amount of lend
     function lend(uint256 _amount) external isOwner whenNotEmergency nonReentrant override {
         IERC20Upgradeable(wantToken).safeTransferFrom(msg.sender, address(this), _amount);
 
@@ -274,6 +276,10 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
         emit LendToStrategy(_amount);
     }
 
+    /// @notice Redeem
+    /// @param _redeemShares The amount of shares to withdraw
+    /// @param _totalShares The total amount of shares owned by this strategy
+    /// @return _redeemBalance The balance of redeem
     function redeem(uint256 _redeemShares, uint256 _totalShares) external isOwner override returns (uint256 _redeemBalance) {
         _redeemBalance = redeemToVault(_redeemShares, _totalShares);
         if (_redeemBalance > netMarketMakingAmount) {
@@ -285,11 +291,19 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
         emit Redeem(_redeemBalance);
     }
 
+    /// @notice Redeem to vault by keeper
+    /// @param _redeemShares The amount of shares to withdraw
+    /// @param _totalShares The total amount of shares owned by this strategy
+    /// @return _redeemBalance The balance of redeem
     function redeemToVaultByKeeper(uint256 _redeemShares, uint256 _totalShares) external override returns (uint256 _redeemBalance) {
         _redeemBalance = redeemToVault(_redeemShares, _totalShares);
         emit RedeemToVault(_redeemBalance);
     }
 
+    /// @notice Redeem to vault
+    /// @param _redeemShares The amount of shares to withdraw
+    /// @param _totalShares The total amount of shares owned by this strategy
+    /// @return _redeemBalance The balance of redeem
     function redeemToVault(uint256 _redeemShares, uint256 _totalShares) internal whenNotEmergency nonReentrant returns (uint256 _redeemBalance) {
         uint256 currentBorrow = uniswapV3RiskOnHelper.getCurrentBorrow(borrowToken, interestRateMode, address(this));
         (uint256 _totalCollateral, , , , ,) = uniswapV3RiskOnHelper.borrowInfo(address(this));
@@ -359,6 +373,8 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
         }
     }
 
+    /// @notice Rebalance the position of this strategy
+    /// Requirements: only keeper can call
     function borrowRebalance() external whenNotEmergency nonReentrant override isKeeper {
         (uint256 _totalCollateral, uint256 _totalDebt, , , ,) = uniswapV3RiskOnHelper.borrowInfo(address(this));
 
@@ -388,6 +404,7 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
         rebalance(_tick);
     }
 
+    /// @notice Burn all liquidity
     function burnAll() internal {
         harvest();
         // Withdraw all current liquidity
@@ -487,6 +504,8 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
         return int24((_tickCumulatives[1] - _tickCumulatives[0]) / int32(twapDuration));
     }
 
+    /// @notice Deposit to 3rd pool
+    /// @param _tick The new tick to invest
     function depositTo3rdPool(int24 _tick) internal {
         // Mint new base and limit position
         (int24 _tickFloor, int24 _tickCeil, int24 _tickLower, int24 _tickUpper) = uniswapV3RiskOnHelper.getSpecifiedRangesOfTick(_tick, tickSpacing, baseThreshold);
@@ -526,8 +545,7 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
     /// @param _tickUpper The upper tick of the new position in which to add liquidity
     /// @param _amount0Desired The amount of token0 desired to invest
     /// @param _amount1Desired The amount of token1 desired to invest
-    /// @param _base The boolean flag to start base mint,
-    ///     'true' to base mint,'false' to limit mint
+    /// @param _base The boolean flag to start base mint, 'true' to base mint,'false' to limit mint
     /// @return _tokenId The ID of the token that represents the minted position
     /// @return _liquidity The amount of liquidity for this new position minted
     /// @return _amount0 The amount of token0 that was paid to mint the given amount of liquidity
