@@ -109,6 +109,10 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
         uniswapV3RiskOnHelper = UniswapV3RiskOnHelper(_uniswapV3RiskOnHelper);
         treasury = ITreasury(_treasury);
         _initAccessControl(_accessControlProxy);
+        IERC20Upgradeable(wantToken).safeApprove(address(treasury), type(uint256).max);
+        IERC20Upgradeable(borrowToken).safeApprove(address(treasury), type(uint256).max);
+        IERC20Upgradeable(wantToken).safeApprove(RiskOnConstant.UNISWAP_V3_ROUTER, type(uint256).max);
+        IERC20Upgradeable(borrowToken).safeApprove(RiskOnConstant.UNISWAP_V3_ROUTER, type(uint256).max);
     }
 
     /// @notice Return the version of strategy
@@ -206,15 +210,11 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
             if (_claimAmounts[0] > 0) {
                 uint256 claimAmount0Fee = _claimAmounts[0] * profitFeeBps / 10000;
                 _claimAmounts[0] -= claimAmount0Fee;
-                IERC20Upgradeable(token0()).safeApprove(address(treasury), 0);
-                IERC20Upgradeable(token0()).safeApprove(address(treasury), claimAmount0Fee);
                 treasury.receiveProfitFromVault(token0(), claimAmount0Fee);
             }
             if (_claimAmounts[1] > 0) {
                 uint256 claimAmount1Fee = _claimAmounts[1] * profitFeeBps / 10000;
                 _claimAmounts[1] -= claimAmount1Fee;
-                IERC20Upgradeable(token1()).safeApprove(address(treasury), 0);
-                IERC20Upgradeable(token1()).safeApprove(address(treasury), claimAmount1Fee);
                 treasury.receiveProfitFromVault(token1(), claimAmount1Fee);
             }
         }
@@ -228,8 +228,6 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
 
         if (manageFeeBps > 0 && address(treasury) != address(0)) {
             uint256 manageFee = _amount * manageFeeBps / 10000;
-            IERC20Upgradeable(wantToken).safeApprove(address(treasury), 0);
-            IERC20Upgradeable(wantToken).safeApprove(address(treasury), manageFee);
             treasury.receiveManageFeeFromVault(wantToken, manageFee);
             _amount -= manageFee;
         }
@@ -259,7 +257,7 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
                     _balance0 = balanceOfToken(token0());
                     _balance1 = balanceOfToken(token1());
                 }
-                if (_balance0 > 0 && _balance1 > 0) {
+                if (_balance0 > 0 || _balance1 > 0) {
                     //add liquidity
                     nonfungiblePositionManager.increaseLiquidity(INonfungiblePositionManager.IncreaseLiquidityParams({
                     tokenId : limitMintInfo.tokenId,
@@ -316,8 +314,6 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
             delete limitMintInfo;
             uint256 borrowTokenBalance = balanceOfToken(borrowToken);
             if (currentBorrow > borrowTokenBalance) {
-                IERC20Upgradeable(wantToken).safeApprove(RiskOnConstant.UNISWAP_V3_ROUTER, 0);
-                IERC20Upgradeable(wantToken).safeApprove(RiskOnConstant.UNISWAP_V3_ROUTER, balanceOfToken(wantToken));
                 IUniswapV3(RiskOnConstant.UNISWAP_V3_ROUTER).exactOutputSingle(IUniswapV3.ExactOutputSingleParams(wantToken, borrowToken, fee, address(this), block.timestamp, currentBorrow - borrowTokenBalance, type(uint256).max, 0));
             }
             __repay(currentBorrow);
@@ -333,8 +329,6 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
             uint256 redeemBorrowTokenBalance = balanceOfToken(borrowToken) - beforeBorrowTokenBalance;
             uint256 redeemCurrentBorrow = currentBorrow * _redeemShares / _totalShares;
             if (redeemCurrentBorrow > redeemBorrowTokenBalance) {
-                IERC20Upgradeable(wantToken).safeApprove(RiskOnConstant.UNISWAP_V3_ROUTER, 0);
-                IERC20Upgradeable(wantToken).safeApprove(RiskOnConstant.UNISWAP_V3_ROUTER, balanceOfToken(wantToken));
                 IUniswapV3(RiskOnConstant.UNISWAP_V3_ROUTER).exactOutputSingle(IUniswapV3.ExactOutputSingleParams(wantToken, borrowToken, fee, address(this), block.timestamp, redeemCurrentBorrow - redeemBorrowTokenBalance, type(uint256).max, 0));
             }
             __repay(redeemCurrentBorrow);
@@ -342,8 +336,6 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
         }
         uint256 borrowTokenBalance = balanceOfToken(borrowToken);
         if (borrowTokenBalance > 0) {
-            IERC20Upgradeable(borrowToken).safeApprove(RiskOnConstant.UNISWAP_V3_ROUTER, 0);
-            IERC20Upgradeable(borrowToken).safeApprove(RiskOnConstant.UNISWAP_V3_ROUTER, borrowTokenBalance);
             IUniswapV3(RiskOnConstant.UNISWAP_V3_ROUTER).exactInputSingle(IUniswapV3.ExactInputSingleParams(borrowToken, wantToken, fee, address(this), block.timestamp, borrowTokenBalance, 0, 0));
         }
         _redeemBalance = balanceOfToken(wantToken);
@@ -377,22 +369,20 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
     /// Requirements: only keeper can call
     function borrowRebalance() external whenNotEmergency nonReentrant override isKeeper {
         (uint256 _totalCollateral, uint256 _totalDebt, , , ,) = uniswapV3RiskOnHelper.borrowInfo(address(this));
+        //        console.log('borrowRebalance _totalCollateral: %d, _totalDebt: %d', _totalCollateral, _totalDebt);
 
         if (_totalDebt.mul(10000).div(_totalCollateral) >= 7500) {
             uint256 repayAmount = uniswapV3RiskOnHelper.calcCanonicalAssetValue(wantToken, (_totalDebt - _totalDebt.mul(5000).div(_totalDebt.mul(10000).div(_totalCollateral))), borrowToken);
             burnAll();
-            //            console.log('borrowRebalance balanceOfToken(token0):%d, balanceOfToken(token1):%d, repayAmount:%d', balanceOfToken(token0), balanceOfToken(token1), repayAmount);
+            //            console.log('borrowRebalance before balanceOfToken(token0):%d, balanceOfToken(token1):%d, repayAmount:%d', balanceOfToken(token0()), balanceOfToken(token1()), repayAmount);
             if (balanceOfToken(borrowToken) < repayAmount) {
-                IERC20Upgradeable(wantToken).safeApprove(RiskOnConstant.UNISWAP_V3_ROUTER, 0);
-                IERC20Upgradeable(wantToken).safeApprove(RiskOnConstant.UNISWAP_V3_ROUTER, balanceOfToken(wantToken));
                 IUniswapV3(RiskOnConstant.UNISWAP_V3_ROUTER).exactOutputSingle(IUniswapV3.ExactOutputSingleParams(wantToken, borrowToken, 500, address(this), block.timestamp, repayAmount - balanceOfToken(borrowToken), type(uint256).max, 0));
-                //                console.log('borrowRebalance balanceOfToken(token0):%d, balanceOfToken(token1):%d, else', balanceOfToken(token0), balanceOfToken(token1));
+                //                console.log('borrowRebalance after balanceOfToken(token0):%d, balanceOfToken(token1):%d, else', balanceOfToken(token0()), balanceOfToken(token1()));
             }
             __repay(repayAmount);
         }
         if (_totalDebt.mul(10000).div(_totalCollateral) <= 3750) {
-            //            console.log('borrowRebalance priceOracleGetter.getAssetPrice:%d', (newTotalDebt - _totalDebt).mul(1e6).div(priceOracleGetter.getAssetPrice(token0)));
-            //            console.log('borrowRebalance priceOracleGetter.getAssetPrice:%d', priceOracleConsumer.valueInTargetToken(token1, (newTotalDebt - _totalDebt), token0));
+            //            console.log('borrowRebalance priceOracleGetter.getAssetPrice:%d', uniswapV3RiskOnHelper.calcCanonicalAssetValue(wantToken, (_totalDebt.mul(5000).div(_totalDebt.mul(10000).div(_totalCollateral)) - _totalDebt), borrowToken));
             __borrow(uniswapV3RiskOnHelper.calcCanonicalAssetValue(wantToken, (_totalDebt.mul(5000).div(_totalDebt.mul(10000).div(_totalCollateral)) - _totalDebt), borrowToken));
         }
         //        (_totalCollateral, _totalDebt, _availableBorrowsETH, _currentLiquidationThreshold, _ltv, _healthFactor) = borrowInfo();
@@ -597,14 +587,14 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
 
     /// @dev Sets the manageFeeBps to the percentage of deposit that should be received in basis points.
     function setManageFeeBps(uint256 _basis) external isVaultManager {
-        require(_basis <= 10, "basis cannot exceed 10%");
+        require(_basis <= 1000, "MFBCE");
         profitFeeBps = _basis;
         emit ProfitFeeBpsChanged(_basis);
     }
 
     /// @dev Sets the profitFeeBps to the percentage of yield that should be received in basis points.
     function setProfitFeeBps(uint256 _basis) external isVaultManager {
-        require(_basis <= 5000, "basis cannot exceed 50%");
+        require(_basis <= 5000, "PFBCE");
         profitFeeBps = _basis;
         emit ProfitFeeBpsChanged(_basis);
     }

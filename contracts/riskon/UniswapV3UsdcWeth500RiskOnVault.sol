@@ -10,6 +10,7 @@ contract UniswapV3UsdcWeth500RiskOnVault is IUniswapV3RiskOnVaultInitialize, Uni
         super._initialize(
             _owner,
             _wantToken,
+        // WETH-USDC-UniswapV3Pool on polygon
         // https://info.uniswap.org/#/polygon/pools/0x45dda9cb7c25131df268515131f647d726f50608
             address(0x45dDa9cb7c25131DF268515131f647d726f50608),
             2,

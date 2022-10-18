@@ -49,7 +49,7 @@ contract UniswapV3RiskOnHelper is Initializable {
     /// @return _tickCeil The nearest tick which GTE `_tick`
     /// @return _tickLower  `_tickFloor` subtrace `baseThreshold`
     /// @return _tickUpper  `_tickFloor` add `baseThreshold`
-    function getSpecifiedRangesOfTick(int24 _tick, int24 _tickSpacing, int24 _baseThreshold) public view returns (int24 _tickFloor, int24 _tickCeil, int24 _tickLower, int24 _tickUpper) {
+    function getSpecifiedRangesOfTick(int24 _tick, int24 _tickSpacing, int24 _baseThreshold) public pure returns (int24 _tickFloor, int24 _tickCeil, int24 _tickLower, int24 _tickUpper) {
         int24 _compressed = _tick / _tickSpacing;
         if (_tick < 0 && _tick % _tickSpacing != 0) _compressed--;
         _tickFloor = _compressed * _tickSpacing;
