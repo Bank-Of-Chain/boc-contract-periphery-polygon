@@ -14,8 +14,8 @@ const {
     USDC_ADDRESS
 } = require('../../config/mainnet-fork-test-config');
 
-const vaultFactoryAddress = '0x4054765d35be9b4b27C4A1db3B269ae40f0541Ad';
-const riskOnVaultBaseAddress = '0xFdc146E92D892F326CB9a1A480f58fc30a766c98';
+const vaultFactoryAddress = '0x8013Dd64084e9c9122567563AA86981F4C20576B';
+const riskOnVaultBaseAddress = '0xB83c5F00c01f1662dcc3A1370553f7eCD574Ed88';
 const poolAddress = '0x45dDa9cb7c25131DF268515131f647d726f50608';
 
 const main = async () => {
@@ -69,10 +69,10 @@ const main = async () => {
     console.log('swapAmount: ', swapAmount);
     await swap(swapTokenAddress, swapTokenPosition, swapAmount, investor);
 
-    // await advanceBlock(1);
+    await advanceBlock(1);
     console.log(`riskOnVault harvest before, estimatedTotalAssets: %d`, new BigNumber(await riskOnVault.estimatedTotalAssets()));
 
-    // await riskOnVault.harvest({from: keeper});
+    await riskOnVault.harvest({from: keeper});
 
     console.log(`riskOnVault harvest after, estimatedTotalAssets: %d`, new BigNumber(await riskOnVault.estimatedTotalAssets()));
 
