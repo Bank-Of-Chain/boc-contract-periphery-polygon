@@ -152,7 +152,13 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
         uint256 amount0 = balanceOfToken(token0());
         uint256 amount1 = balanceOfToken(token1());
         _totalAssets = depositTo3rdPoolTotalAssets();
+        console.log('----------------depositTo3rdPoolTotalAssets(): %d', _totalAssets);
         if (wantToken == token0()) {
+            console.log('----------------amount0: %d', amount0);
+            console.log('----------------uniswapV3RiskOnHelper.getTotalCollateralTokenAmount(address(this), wantToken): %d', uniswapV3RiskOnHelper.getTotalCollateralTokenAmount(address(this), wantToken));
+            console.log('----------------uniswapV3RiskOnHelper.calcCanonicalAssetValue(token1(), amount1, token0()): %d', uniswapV3RiskOnHelper.calcCanonicalAssetValue(token1(), amount1, token0()));
+            console.log('----------------uniswapV3RiskOnHelper.getCurrentBorrow(borrowToken, interestRateMode, address(this)): %d', uniswapV3RiskOnHelper.getCurrentBorrow(borrowToken, interestRateMode, address(this)));
+            console.log('----------------uniswapV3RiskOnHelper.calcCanonicalAssetValue(token1(), uniswapV3RiskOnHelper.getCurrentBorrow(borrowToken, interestRateMode, address(this)), token0()): %d', uniswapV3RiskOnHelper.calcCanonicalAssetValue(token1(), uniswapV3RiskOnHelper.getCurrentBorrow(borrowToken, interestRateMode, address(this)), token0()));
             _totalAssets += (amount0 + uniswapV3RiskOnHelper.getTotalCollateralTokenAmount(address(this), wantToken) + uniswapV3RiskOnHelper.calcCanonicalAssetValue(token1(), amount1, token0()) - uniswapV3RiskOnHelper.calcCanonicalAssetValue(token1(), uniswapV3RiskOnHelper.getCurrentBorrow(borrowToken, interestRateMode, address(this)), token0()));
         } else {
             _totalAssets += (amount1 + uniswapV3RiskOnHelper.getTotalCollateralTokenAmount(address(this), wantToken) + uniswapV3RiskOnHelper.calcCanonicalAssetValue(token0(), amount0, token1()) - uniswapV3RiskOnHelper.calcCanonicalAssetValue(token0(), uniswapV3RiskOnHelper.getCurrentBorrow(borrowToken, interestRateMode, address(this)), token1()));
