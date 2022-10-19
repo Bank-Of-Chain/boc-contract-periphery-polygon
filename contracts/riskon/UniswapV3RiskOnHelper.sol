@@ -115,7 +115,7 @@ contract UniswapV3RiskOnHelper is Initializable {
 
     function calcAaveBaseCurrencyValueInAsset(uint256 _amount, address _quoteAsset) public view returns (uint256) {
         uint256 price = priceOracleGetter.getAssetPrice(_quoteAsset);
-        return _amount.mul(price).mul(decimalUnitOfToken(_quoteAsset)).div(AAVE_BASE_CURRENCY_UNIT);
+        return _amount.mul(decimalUnitOfToken(_quoteAsset)).div(price);
     }
 
     function decimalUnitOfToken(address _token) internal view returns (uint256){
