@@ -506,13 +506,19 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
         (int24 _tickFloor, int24 _tickCeil, int24 _tickLower, int24 _tickUpper) = uniswapV3RiskOnHelper.getSpecifiedRangesOfTick(_tick, tickSpacing, baseThreshold);
         uint256 _balance0 = balanceOfToken(token0());
         uint256 _balance1 = balanceOfToken(token1());
-        if (_balance0 > 0 && _balance1 > 0) {
+        if (_balance0 > 10000 && _balance1 > 10000) {
             mintNewPosition(_tickLower, _tickUpper, _balance0, _balance1, true);
             _balance0 = balanceOfToken(token0());
             _balance1 = balanceOfToken(token1());
         }
 
-        if (_balance0 > 0 || _balance1 > 0) {
+        if (_balance0 > 10000 || _balance1 > 10000) {
+            if (_balance0 > 10000) {
+                _balance1 = 0;
+            }
+            if (_balance1 > 10000) {
+                _balance0 = 0;
+            }
             // Place bid or ask order on Uniswap depending on which token is left
             if (getLiquidityForAmounts(_tickFloor - limitThreshold, _tickFloor, _balance0, _balance1) > getLiquidityForAmounts(_tickCeil, _tickCeil + limitThreshold, _balance0, _balance1)) {
                 mintNewPosition(_tickFloor - limitThreshold, _tickFloor, _balance0, _balance1, false);
