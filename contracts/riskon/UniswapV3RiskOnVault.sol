@@ -252,37 +252,7 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
         if (baseMintInfo.tokenId == 0) {
             depositTo3rdPool(_tick);
         } else {
-            if (shouldRebalance(_tick)) {
-                rebalance(_tick);
-            } else {
-                // addLiquidityTo3rdPool
-                uint256 _balance0 = balanceOfToken(token0());
-                uint256 _balance1 = balanceOfToken(token1());
-                if (_balance0 > 0 && _balance1 > 0) {
-                    //add liquidity
-                    nonfungiblePositionManager.increaseLiquidity(INonfungiblePositionManager.IncreaseLiquidityParams({
-                    tokenId : baseMintInfo.tokenId,
-                    amount0Desired : _balance0,
-                    amount1Desired : _balance1,
-                    amount0Min : 0,
-                    amount1Min : 0,
-                    deadline : block.timestamp
-                    }));
-                    _balance0 = balanceOfToken(token0());
-                    _balance1 = balanceOfToken(token1());
-                }
-                if (_balance0 > 0 || _balance1 > 0) {
-                    //add liquidity
-                    nonfungiblePositionManager.increaseLiquidity(INonfungiblePositionManager.IncreaseLiquidityParams({
-                    tokenId : limitMintInfo.tokenId,
-                    amount0Desired : _balance0,
-                    amount1Desired : _balance1,
-                    amount0Min : 0,
-                    amount1Min : 0,
-                    deadline : block.timestamp
-                    }));
-                }
-            }
+            rebalance(_tick);
         }
         netMarketMakingAmount += _amount;
         emit LendToStrategy(_amount);
