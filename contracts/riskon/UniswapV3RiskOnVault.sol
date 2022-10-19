@@ -368,22 +368,23 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
     /// @notice Rebalance the position of this strategy
     /// Requirements: only keeper can call
     function borrowRebalance() external whenNotEmergency nonReentrant override isKeeper {
+        console.log('111111111111111111111111111');
         (uint256 _totalCollateral, uint256 _totalDebt, , , ,) = uniswapV3RiskOnHelper.borrowInfo(address(this));
-        //        console.log('borrowRebalance _totalCollateral: %d, _totalDebt: %d', _totalCollateral, _totalDebt);
+        console.log('borrowRebalance _totalCollateral: %d, _totalDebt: %d', _totalCollateral, _totalDebt);
 
         if (_totalDebt.mul(10000).div(_totalCollateral) >= 7500) {
-            uint256 repayAmount = uniswapV3RiskOnHelper.calcCanonicalAssetValue(wantToken, (_totalDebt - _totalDebt.mul(5000).div(_totalDebt.mul(10000).div(_totalCollateral))), borrowToken);
+            uint256 repayAmount = uniswapV3RiskOnHelper.calcAaveBaseCurrencyValueInAsset((_totalDebt - _totalCollateral.mul(5000).div(10000)), borrowToken);
             burnAll();
-            //            console.log('borrowRebalance before balanceOfToken(token0):%d, balanceOfToken(token1):%d, repayAmount:%d', balanceOfToken(token0()), balanceOfToken(token1()), repayAmount);
+            console.log('borrowRebalance before balanceOfToken(token0):%d, balanceOfToken(token1):%d, repayAmount:%d', balanceOfToken(token0()), balanceOfToken(token1()), repayAmount);
             if (balanceOfToken(borrowToken) < repayAmount) {
                 IUniswapV3(RiskOnConstant.UNISWAP_V3_ROUTER).exactOutputSingle(IUniswapV3.ExactOutputSingleParams(wantToken, borrowToken, 500, address(this), block.timestamp, repayAmount - balanceOfToken(borrowToken), type(uint256).max, 0));
-                //                console.log('borrowRebalance after balanceOfToken(token0):%d, balanceOfToken(token1):%d, else', balanceOfToken(token0()), balanceOfToken(token1()));
+                console.log('borrowRebalance after balanceOfToken(token0):%d, balanceOfToken(token1):%d, else', balanceOfToken(token0()), balanceOfToken(token1()));
             }
             __repay(repayAmount);
         }
         if (_totalDebt.mul(10000).div(_totalCollateral) <= 3750) {
-            //            console.log('borrowRebalance priceOracleGetter.getAssetPrice:%d', uniswapV3RiskOnHelper.calcCanonicalAssetValue(wantToken, (_totalDebt.mul(5000).div(_totalDebt.mul(10000).div(_totalCollateral)) - _totalDebt), borrowToken));
-            __borrow(uniswapV3RiskOnHelper.calcCanonicalAssetValue(wantToken, (_totalDebt.mul(5000).div(_totalDebt.mul(10000).div(_totalCollateral)) - _totalDebt), borrowToken));
+            console.log('borrowRebalance priceOracleGetter.getAssetPrice:%d', uniswapV3RiskOnHelper.calcAaveBaseCurrencyValueInAsset((_totalCollateral.mul(5000).div(10000) - _totalDebt), borrowToken));
+            __borrow(uniswapV3RiskOnHelper.calcAaveBaseCurrencyValueInAsset((_totalCollateral.mul(5000).div(10000) - _totalDebt), borrowToken));
         }
         //        (_totalCollateral, _totalDebt, _availableBorrowsETH, _currentLiquidationThreshold, _ltv, _healthFactor) = borrowInfo();
         //        console.log('----------------%d,%d', _totalCollateral, _totalDebt);
@@ -464,7 +465,7 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
         }
 
         // check price near _twap
-        int24 _twap = getTwap();
+        int24 _twap = uniswapV3RiskOnHelper.getTwap(address(pool), twapDuration);
         int24 _twapDeviation = _tick > _twap ? _tick - _twap : _twap - _tick;
         if (_twapDeviation > maxTwapDeviation) {
             return false;
@@ -482,16 +483,6 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
         }
 
         return true;
-    }
-
-    /// @notice Fetches time-weighted average price in ticks from Uniswap pool.
-    function getTwap() public view returns (int24) {
-        uint32[] memory _secondsAgo = new uint32[](2);
-        _secondsAgo[0] = twapDuration;
-        _secondsAgo[1] = 0;
-
-        (int56[] memory _tickCumulatives,) = pool.observe(_secondsAgo);
-        return int24((_tickCumulatives[1] - _tickCumulatives[0]) / int32(twapDuration));
     }
 
     /// @notice Deposit to 3rd pool

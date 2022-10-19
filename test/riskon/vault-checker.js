@@ -17,6 +17,14 @@ const UniswapV3UsdcWeth500RiskOnVault = hre.artifacts.require('UniswapV3UsdcWeth
 const UniswapV3RiskOnHelper = hre.artifacts.require('UniswapV3RiskOnHelper');
 const Treasury = hre.artifacts.require('contracts/riskon/Treasury.sol:Treasury');
 const MockUniswapV3Router = hre.artifacts.require('MockUniswapV3Router');
+const MockAavePriceOracleConsumer = hre.artifacts.require('MockAavePriceOracleConsumer');
+const ILendingPoolAddressesProvider = hre.artifacts.require('ILendingPoolAddressesProvider');
+const {
+    impersonates
+} = require('../../utils/top-up-utils');
+const {
+    WETH_ADDRESS
+} = require('../../config/mainnet-fork-test-config');
 
 let accessControlProxy;
 let valueInterpreter;
@@ -84,6 +92,11 @@ async function _topUpFamilyBucket() {
     console.log('topUp finish!');
 }
 
+const sendEthers = async (reviver, amount = new BigNumber(10).pow(18).multipliedBy(10)) => {
+    if (!BigNumber.isBigNumber(amount)) return new Error("must be a bignumber object")
+    await network.provider.send("hardhat_setBalance", [reviver, `0x${amount.toString(16)}`])
+}
+
 async function check(vaultName, callback, exchangeRewardTokenCallback, uniswapV3RebalanceCallback) {
     before(async function () {
         accounts = await ethers.getSigners();
@@ -145,54 +158,75 @@ async function check(vaultName, callback, exchangeRewardTokenCallback, uniswapV3
         assert(delta.abs().isLessThan(depositedAmount.multipliedBy(3).dividedBy(10 ** 4)), 'estimatedTotalAssets does not match depositedAmount value');
     });
 
-    let borrowToken;
     it('[the coins balance of vault should be zero]', async function () {
-        let wantTokenContract = await ERC20.at(wantToken);
-        let wantTokenBalance = await wantTokenContract.balanceOf(uniswapV3UsdcWeth500RiskOnVault.address);
-        borrowToken = await uniswapV3UsdcWeth500RiskOnVault.borrowToken();
-        let borrowTokenContract = await ERC20.at(borrowToken);
-        let borrowTokenBalance = await borrowTokenContract.balanceOf(uniswapV3UsdcWeth500RiskOnVault.address);
-        console.log('wantTokenBalance: %d, borrowTokenBalance: %d', wantTokenBalance, borrowTokenBalance);
-        assert(wantTokenBalance.eq(0) && borrowTokenBalance.eq(0), 'there are some coins left in vault');
+        const mockPriceOracle = await MockAavePriceOracleConsumer.new();
+        console.log('mockPriceOracle address: %s', mockPriceOracle.address);
+
+        const addressesProvider = await ILendingPoolAddressesProvider.at('0xa97684ead0e402dC232d5A977953DF7ECBaB3CDb');
+        const addressPrividerOwner = '0xdc9A35B16DB4e126cFeDC41322b3a36454B1F772';
+        await impersonates([addressPrividerOwner]);
+
+        const originPriceOracleConsumer = await MockAavePriceOracleConsumer.at(await addressesProvider.getPriceOracle());
+        console.log('WETH price: %d', new BigNumber(await originPriceOracleConsumer.getAssetPrice(WETH_ADDRESS)).toFixed());
+
+        await sendEthers(addressPrividerOwner);
+        await addressesProvider.setPriceOracle(mockPriceOracle.address, {from: addressPrividerOwner});
+        console.log('addressesProvider priceOracle: %s', await addressesProvider.getPriceOracle());
+
+        console.log('WETH change before: %d', new BigNumber(await mockPriceOracle.getAssetPrice(WETH_ADDRESS)).toFixed());
+        await mockPriceOracle.setAssetPrice(WETH_ADDRESS, await mockPriceOracle.getAssetPrice(WETH_ADDRESS) * 2);
+        console.log('WETH change after: %d', new BigNumber(await mockPriceOracle.getAssetPrice(WETH_ADDRESS)).toFixed());
+        await uniswapV3UsdcWeth500RiskOnVault.borrowRebalance({from: keeper});
     });
 
-    let pendingRewards;
-    let produceReward = false;
-    it('[totalAssets should increase after 3 days]', async function () {
-        const beforeTotalAssets = new BigNumber(await uniswapV3UsdcWeth500RiskOnVault.estimatedTotalAssets());
-        if (callback) {
-            await callback(uniswapV3UsdcWeth500RiskOnVault.address, keeper);
-        }
-        // await advanceBlock(3);
-        pendingRewards = await uniswapV3UsdcWeth500RiskOnVault.harvest.call({from: keeper});
-        await uniswapV3UsdcWeth500RiskOnVault.harvest({from: keeper});
-        const claimAmounts = pendingRewards._claimAmounts;
-        for (let i = 0; i < claimAmounts.length; i++) {
-            const claimAmount = claimAmounts[i];
-            console.log('harvest claimAmount[%d]: %d', i, claimAmount);
-            if (claimAmount > 0) {
-                produceReward = true;
-            }
-        }
-        const afterTotalAssets = new BigNumber(await uniswapV3UsdcWeth500RiskOnVault.estimatedTotalAssets());
-        console.log('beforeTotalAssets: %s, afterTotalAssets: %s, produceReward: %s', beforeTotalAssets.toFixed(), afterTotalAssets.toFixed(), produceReward);
-        assert(afterTotalAssets.isGreaterThan(beforeTotalAssets) || produceReward, 'there is no profit after 3 days');
-    });
-
-    if (uniswapV3RebalanceCallback) {
-        it('[UniswapV3 rebalance]', async function () {
-            await uniswapV3RebalanceCallback(uniswapV3UsdcWeth500RiskOnVault.address);
-        });
-    }
-
-    it('[estimatedTotalAssets should be 0 after withdraw all assets]', async function () {
-        const estimatedTotalAssetsBefore = new BigNumber(await uniswapV3UsdcWeth500RiskOnVault.estimatedTotalAssets());
-        console.log('before withdraw all shares,strategy assets: %d', estimatedTotalAssetsBefore);
-        await uniswapV3UsdcWeth500RiskOnVault.redeem(100, 100, {from: investor});
-        const estimatedTotalAssetsAfter = new BigNumber(await uniswapV3UsdcWeth500RiskOnVault.estimatedTotalAssets());
-        console.log('After withdraw all shares,strategy assets: %d', estimatedTotalAssetsAfter);
-        assert.isTrue(estimatedTotalAssetsAfter.multipliedBy(10000).isLessThan(depositedAmount), 'assets left in strategy should not be more than 1/10000');
-    });
+    // let borrowToken;
+    // it('[the coins balance of vault should be zero]', async function () {
+    //     let wantTokenContract = await ERC20.at(wantToken);
+    //     let wantTokenBalance = await wantTokenContract.balanceOf(uniswapV3UsdcWeth500RiskOnVault.address);
+    //     borrowToken = await uniswapV3UsdcWeth500RiskOnVault.borrowToken();
+    //     let borrowTokenContract = await ERC20.at(borrowToken);
+    //     let borrowTokenBalance = await borrowTokenContract.balanceOf(uniswapV3UsdcWeth500RiskOnVault.address);
+    //     console.log('wantTokenBalance: %d, borrowTokenBalance: %d', wantTokenBalance, borrowTokenBalance);
+    //     assert(wantTokenBalance.eq(0) && borrowTokenBalance.eq(0), 'there are some coins left in vault');
+    // });
+    //
+    // let pendingRewards;
+    // let produceReward = false;
+    // it('[totalAssets should increase after 3 days]', async function () {
+    //     const beforeTotalAssets = new BigNumber(await uniswapV3UsdcWeth500RiskOnVault.estimatedTotalAssets());
+    //     if (callback) {
+    //         await callback(uniswapV3UsdcWeth500RiskOnVault.address, keeper);
+    //     }
+    //     // await advanceBlock(3);
+    //     pendingRewards = await uniswapV3UsdcWeth500RiskOnVault.harvest.call({from: keeper});
+    //     await uniswapV3UsdcWeth500RiskOnVault.harvest({from: keeper});
+    //     const claimAmounts = pendingRewards._claimAmounts;
+    //     for (let i = 0; i < claimAmounts.length; i++) {
+    //         const claimAmount = claimAmounts[i];
+    //         console.log('harvest claimAmount[%d]: %d', i, claimAmount);
+    //         if (claimAmount > 0) {
+    //             produceReward = true;
+    //         }
+    //     }
+    //     const afterTotalAssets = new BigNumber(await uniswapV3UsdcWeth500RiskOnVault.estimatedTotalAssets());
+    //     console.log('beforeTotalAssets: %s, afterTotalAssets: %s, produceReward: %s', beforeTotalAssets.toFixed(), afterTotalAssets.toFixed(), produceReward);
+    //     assert(afterTotalAssets.isGreaterThan(beforeTotalAssets) || produceReward, 'there is no profit after 3 days');
+    // });
+    //
+    // if (uniswapV3RebalanceCallback) {
+    //     it('[UniswapV3 rebalance]', async function () {
+    //         await uniswapV3RebalanceCallback(uniswapV3UsdcWeth500RiskOnVault.address);
+    //     });
+    // }
+    //
+    // it('[estimatedTotalAssets should be 0 after withdraw all assets]', async function () {
+    //     const estimatedTotalAssetsBefore = new BigNumber(await uniswapV3UsdcWeth500RiskOnVault.estimatedTotalAssets());
+    //     console.log('before withdraw all shares,strategy assets: %d', estimatedTotalAssetsBefore);
+    //     await uniswapV3UsdcWeth500RiskOnVault.redeem(100, 100, {from: investor});
+    //     const estimatedTotalAssetsAfter = new BigNumber(await uniswapV3UsdcWeth500RiskOnVault.estimatedTotalAssets());
+    //     console.log('After withdraw all shares,strategy assets: %d', estimatedTotalAssetsAfter);
+    //     assert.isTrue(estimatedTotalAssetsAfter.multipliedBy(10000).isLessThan(depositedAmount), 'assets left in strategy should not be more than 1/10000');
+    // });
 }
 
 module.exports = {

@@ -36,6 +36,9 @@ contract UniswapV3RiskOnHelper is Initializable {
     ILendingPoolAddressesProvider internal constant lendingPoolAddressesProvider = ILendingPoolAddressesProvider(0xa97684ead0e402dC232d5A977953DF7ECBaB3CDb);
     IPriceOracleGetter internal priceOracleGetter;
 
+    /// @dev The uniswap V3 pool inteface
+    IUniswapV3Pool public pool;
+
     /// @notice Initialize this contract
     function initialize() public initializer {
         priceOracleGetter = IPriceOracleGetter(lendingPoolAddressesProvider.getPriceOracle());
@@ -56,6 +59,16 @@ contract UniswapV3RiskOnHelper is Initializable {
         _tickCeil = _tickFloor + _tickSpacing;
         _tickLower = _tickFloor - _baseThreshold;
         _tickUpper = _tickCeil + _baseThreshold;
+    }
+
+    /// @notice Fetches time-weighted average price in ticks from Uniswap pool.
+    function getTwap(address _pool, uint32 _twapDuration) public view returns (int24) {
+        uint32[] memory _secondsAgo = new uint32[](2);
+        _secondsAgo[0] = _twapDuration;
+        _secondsAgo[1] = 0;
+
+        (int56[] memory _tickCumulatives,) = IUniswapV3Pool(_pool).observe(_secondsAgo);
+        return int24((_tickCumulatives[1] - _tickCumulatives[0]) / int32(_twapDuration));
     }
 
     function borrowInfo(address _account) public view returns (
@@ -98,6 +111,11 @@ contract UniswapV3RiskOnHelper is Initializable {
         assets[1] = _quoteAsset;
         uint256[] memory prices = priceOracleGetter.getAssetsPrices(assets);
         return _amount.mul(prices[0]).mul(decimalUnitOfToken(_quoteAsset)).div(prices[1]).div(decimalUnitOfToken(_baseAsset));
+    }
+
+    function calcAaveBaseCurrencyValueInAsset(uint256 _amount, address _quoteAsset) public view returns (uint256) {
+        uint256 price = priceOracleGetter.getAssetPrice(_quoteAsset);
+        return _amount.mul(price).mul(decimalUnitOfToken(_quoteAsset)).div(AAVE_BASE_CURRENCY_UNIT);
     }
 
     function decimalUnitOfToken(address _token) internal view returns (uint256){

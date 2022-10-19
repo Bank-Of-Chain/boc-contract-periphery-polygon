@@ -6,6 +6,12 @@ import './IUniswapV3RiskOnVaultInitialize.sol';
 
 contract UniswapV3UsdcWeth500RiskOnVault is IUniswapV3RiskOnVaultInitialize, UniswapV3RiskOnVault {
 
+    // @notice  min amount of token0 lend
+    uint256 internal token0MinLendAmount;
+
+    // @notice  min amount of token1 lend
+    uint256 internal token1MinLendAmount;
+
     function initialize(address _owner, address _wantToken, address _uniswapV3RiskOnHelper, address _treasury, address _accessControlProxy) public override initializer {
         super._initialize(
             _owner,
