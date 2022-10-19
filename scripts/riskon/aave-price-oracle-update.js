@@ -17,7 +17,7 @@ const main = async () => {
     const originPriceOracleConsumer = await MockAavePriceOracleConsumer.at(await addressesProvider.getPriceOracle());
 
     console.log('WETH change before: %d', new BigNumber(await originPriceOracleConsumer.getAssetPrice(WETH_ADDRESS)).toFixed());
-    await originPriceOracleConsumer.setAssetPrice(WETH_ADDRESS, await mockPriceOracle.getAssetPrice(WETH_ADDRESS) * 2);
+    await originPriceOracleConsumer.setAssetPrice(WETH_ADDRESS, await originPriceOracleConsumer.getAssetPrice(WETH_ADDRESS) * 2);
     console.log('WETH change after: %d', new BigNumber(await originPriceOracleConsumer.getAssetPrice(WETH_ADDRESS)).toFixed());
 };
 
