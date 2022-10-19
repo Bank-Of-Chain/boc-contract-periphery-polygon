@@ -26,10 +26,6 @@ const main = async () => {
     await sendEthers(addressPrividerOwner);
     await addressesProvider.setPriceOracle(mockPriceOracle.address, {from: addressPrividerOwner});
     console.log('addressesProvider priceOracle: %s', await addressesProvider.getPriceOracle());
-
-    console.log('WETH change before: %d', new BigNumber(await mockPriceOracle.getAssetPrice(WETH_ADDRESS)).toFixed());
-    await mockPriceOracle.setAssetPrice(WETH_ADDRESS, await mockPriceOracle.getAssetPrice(WETH_ADDRESS) * 2);
-    console.log('WETH change after: %d', new BigNumber(await mockPriceOracle.getAssetPrice(WETH_ADDRESS)).toFixed());
 };
 
 const sendEthers = async (reviver, amount = new BigNumber(10).pow(18).multipliedBy(10)) => {
