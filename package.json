@@ -63,6 +63,7 @@
     "deploy_risk_on": "yarn topup && hardhat run scripts/deploy-risk-on.js --network localhost",
     "create-risk-on-usdc-vault": "hardhat run scripts/riskon/create-risk-on-usdc-vault.js --network localhost",
     "mock-aave-price-oracle": "hardhat run scripts/riskon/mock-aave-price-oracle.js --network localhost",
+    "aave-price-oracle-update": "hardhat run scripts/riskon/aave-price-oracle-update.js --network localhost",
     "mock-uniswap-v3-usdc-swap": "hardhat run scripts/riskon/mock-uniswap-v3-usdc-swap.js --network localhost",
     "mock-uniswap-v3-weth-swap": "hardhat run scripts/riskon/mock-uniswap-v3-weth-swap.js --network localhost",
     "risk-on-main-process": "hardhat run scripts/riskon/risk-on-main-process.js --network localhost",
