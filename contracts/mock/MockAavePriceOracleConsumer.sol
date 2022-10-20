@@ -13,12 +13,15 @@ contract MockAavePriceOracleConsumer is IPriceOracleGetter {
     constructor(){
         IPriceOracleGetter originPriceOracle = IPriceOracleGetter(originPriceOracleConsumerAddr);
         // init asset price
-        //USDC
+        // USDC
         address USDC = 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174;
         priceMap[USDC] = originPriceOracle.getAssetPrice(USDC);
-        //WETH
+        // WETH
         address WETH = 0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619;
         priceMap[WETH] = originPriceOracle.getAssetPrice(WETH);
+        // WWMATIC
+        address WWMATIC = 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270;
+        priceMap[WWMATIC] = originPriceOracle.getAssetPrice(WWMATIC);
     }
 
     /// @notice Sets the underlying _price of a `_asset` asset
