@@ -16,17 +16,26 @@ interface IUniswapV3RiskOnVault {
     /// @param _shutdown The new boolean value of the emergency shutdown switch
     event SetEmergencyShutdown(bool _shutdown);
 
+    /// @param _basis The profit fee bps changed
     event ProfitFeeBpsChanged(uint256 _basis);
+
+    /// @param _minLendAmount The token0MinLendAmount to lend
+    event SetToken0MinLendAmount(uint256 _minLendAmount);
+
+    /// @param _minLendAmount The token1MinLendAmount to lend
+    event SetToken1MinLendAmount(uint256 _minLendAmount);
 
     /// @param _rewardTokens The reward tokens
     /// @param _claimAmounts The claim amounts
     event StrategyReported(address[] _rewardTokens, uint256[] _claimAmounts);
 
+    /// @param _wantToken The want token
     /// @param _amount The amount list of token wanted
-    event LendToStrategy(uint256 _amount);
+    event LendToStrategy(address _wantToken, uint256 _amount);
 
+    /// @param _wantToken The want token
     /// @param _redeemAmount The amount of redeem
-    event Redeem(uint256 _redeemAmount);
+    event Redeem(address _wantToken, uint256 _redeemAmount);
 
     /// @param _redeemAmount The amount of redeem
     event RedeemToVault(uint256 _redeemAmount);

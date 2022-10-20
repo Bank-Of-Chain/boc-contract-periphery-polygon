@@ -86,25 +86,25 @@ contract Treasury is
         return IERC20Upgradeable(_token).balanceOf(address(this));
     }
 
-    /// Requirements: only keeper role can call
+    /// Requirements: only gov role can call
     /// @inheritdoc ITreasury
     function withdrawToken(
         address _token,
         address _receiver,
         uint256 _amount
-    ) external override onlyRole(BocRoles.KEEPER_ROLE) {
+    ) external override onlyRole(BocRoles.GOV_ROLE) {
         require(_amount <= balance(_token), '!insufficient');
         IERC20Upgradeable(_token).safeTransfer(_receiver, _amount);
     }
 
-    /// Requirements: only keeper role can call
+    /// Requirements: only gov role can call
     /// @inheritdoc ITreasury
     function withdrawETH(address payable _receiver, uint256 _amount)
         external
         payable
         override
         nonReentrant
-        onlyRole(BocRoles.KEEPER_ROLE)
+        onlyRole(BocRoles.GOV_ROLE)
     {
         require(_amount <= address(this).balance, '!insufficient');
         _receiver.transfer(_amount);
@@ -149,7 +149,6 @@ contract Treasury is
         IERC20Upgradeable(_token).safeTransferFrom(msg.sender, address(this), _profitAmount);
         accVaultProfit[msg.sender][_token] += _profitAmount;
         emit ReceiveProfit(msg.sender, _token, _profitAmount);
-        
     }
 
     /// @notice Sets `_token` is receivable token or not
@@ -160,5 +159,4 @@ contract Treasury is
         isReceivableToken[_token] = _newBool;
         emit ReceiveTokenChanged(_token, _newBool);
     }
-
 }

@@ -6,12 +6,6 @@ import './IUniswapV3RiskOnVaultInitialize.sol';
 
 contract UniswapV3UsdcWeth500RiskOnVault is IUniswapV3RiskOnVaultInitialize, UniswapV3RiskOnVault {
 
-    // @notice  min amount of token0 lend
-    uint256 internal token0MinLendAmount;
-
-    // @notice  min amount of token1 lend
-    uint256 internal token1MinLendAmount;
-
     function initialize(address _owner, address _wantToken, address _uniswapV3RiskOnHelper, address _treasury, address _accessControlProxy) public override initializer {
         super._initialize(
             _owner,
@@ -49,5 +43,15 @@ contract UniswapV3UsdcWeth500RiskOnVault is IUniswapV3RiskOnVaultInitialize, Uni
     // WETH
     function token1() public pure override returns (address) {
         return address(0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619);
+    }
+
+    // DefaultToken0MinLendAmount
+    function getDefaultToken0MinLendAmount() internal pure override returns (uint256) {
+        return 1e10;
+    }
+
+    // DefaultToken1MinLendAmount
+    function getDefaultToken1MinLendAmount() internal pure override returns (uint256) {
+        return 1e19;
     }
 }

@@ -34,6 +34,21 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
     /// @notice  emergency shutdown
     bool public override emergencyShutdown;
 
+    bool internal invested;
+    address internal owner;
+    address public wantToken;
+    int24 internal baseThreshold;
+    int24 internal limitThreshold;
+    int24 internal minTickMove;
+    int24 internal maxTwapDeviation;
+    int24 internal lastTick;
+    int24 internal tickSpacing;
+    uint32 internal twapDuration;
+    uint256 internal period;
+    uint256 internal lastTimestamp;
+    uint256 internal token0MinLendAmount;
+    uint256 internal token1MinLendAmount;
+
     /// @notice  net market making amount
     uint256 public override netMarketMakingAmount;
 
@@ -46,17 +61,6 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
     // @notice  amount of yield collected in basis points
     uint256 public profitFeeBps;
 
-    address internal owner;
-    address public wantToken;
-    int24 internal baseThreshold;
-    int24 internal limitThreshold;
-    int24 internal minTickMove;
-    int24 internal maxTwapDeviation;
-    int24 internal lastTick;
-    int24 internal tickSpacing;
-    uint256 internal period;
-    uint256 internal lastTimestamp;
-    uint32 internal twapDuration;
     MintInfo internal baseMintInfo;
     MintInfo internal limitMintInfo;
     UniswapV3RiskOnHelper internal uniswapV3RiskOnHelper;
@@ -99,6 +103,8 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
         owner = _owner;
         manageFeeBps = 100;
         profitFeeBps = 0;
+        token0MinLendAmount = getDefaultToken0MinLendAmount();
+        token1MinLendAmount = getDefaultToken1MinLendAmount();
         baseThreshold = _baseThreshold;
         limitThreshold = _limitThreshold;
         period = _period;
@@ -120,11 +126,17 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
         return "1.0.0";
     }
 
-    // /// @notice Get token0 address of uniswap V3 pool invested by this vault
+    /// @notice Get token0 address of uniswap V3 pool invested by this vault
     function token0() public pure override virtual returns (address);
 
-    // /// @notice Get token1 address of uniswap V3 pool invested by this vault
+    /// @notice Get token1 address of uniswap V3 pool invested by this vault
     function token1() public pure override virtual returns (address);
+
+    /// @notice Get min lend amount of token0
+    function getDefaultToken0MinLendAmount() internal pure virtual returns (uint256);
+
+    /// @notice Get min lend amount of token1
+    function getDefaultToken1MinLendAmount() internal pure virtual returns (uint256);
 
     /// @notice Gets the statuses about uniswap V3
     /// @return _owner The owner
@@ -238,6 +250,15 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
     /// @notice Lend
     /// @param _amount The amount of lend
     function lend(uint256 _amount) external isOwner whenNotEmergency nonReentrant override {
+        if (!invested) {
+            if (wantToken == token0()) {
+                require(_amount >= token0MinLendAmount, "MLA");
+            } else {
+                require(_amount >= token1MinLendAmount, "MLA");
+            }
+            invested = true;
+        }
+
         IERC20Upgradeable(wantToken).safeTransferFrom(msg.sender, address(this), _amount);
 
         if (manageFeeBps > 0 && address(treasury) != address(0)) {
@@ -255,7 +276,7 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
             rebalance(_tick);
         }
         netMarketMakingAmount += _amount;
-        emit LendToStrategy(_amount);
+        emit LendToStrategy(wantToken, _amount);
     }
 
     /// @notice Redeem
@@ -270,7 +291,7 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
             netMarketMakingAmount -= _redeemBalance;
         }
         IERC20Upgradeable(wantToken).safeTransfer(msg.sender, _redeemBalance);
-        emit Redeem(_redeemBalance);
+        emit Redeem(wantToken, _redeemBalance);
     }
 
     /// @notice Redeem to vault by keeper
@@ -567,10 +588,25 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
     }
 
     /// @dev Sets the manageFeeBps to the percentage of deposit that should be received in basis points.
+    /// Requirements: only vault manager can call
     function setManageFeeBps(uint256 _basis) external isVaultManager {
         require(_basis <= 1000, "MFBCE");
         profitFeeBps = _basis;
         emit ProfitFeeBpsChanged(_basis);
+    }
+
+    /// @dev Sets the token0MinLendAmount to lend.
+    /// Requirements: only vault manager can call
+    function setToken0MinLendAmount(uint256 _minLendAmount) external isVaultManager {
+        token0MinLendAmount = _minLendAmount;
+        emit SetToken0MinLendAmount(_minLendAmount);
+    }
+
+    /// @dev Sets the token1MinLendAmount to lend.
+    /// Requirements: only vault manager can call
+    function setToken1MinLendAmount(uint256 _minLendAmount) external isVaultManager {
+        token1MinLendAmount = _minLendAmount;
+        emit SetToken1MinLendAmount(_minLendAmount);
     }
 
     /// @dev Sets the profitFeeBps to the percentage of yield that should be received in basis points.
