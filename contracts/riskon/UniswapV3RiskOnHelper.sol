@@ -34,7 +34,9 @@ contract UniswapV3RiskOnHelper is Initializable {
     uint256 internal constant VALUE_INTERPRETER_PRICE_BASE_UNIT = 10 ** 18;
 
     ILendingPoolAddressesProvider internal constant lendingPoolAddressesProvider = ILendingPoolAddressesProvider(0xa97684ead0e402dC232d5A977953DF7ECBaB3CDb);
-    IPriceOracleGetter internal priceOracleGetter;
+
+    /// @dev The price oracle inteface
+    IPriceOracleGetter public priceOracleGetter;
 
     /// @dev The uniswap V3 pool inteface
     IUniswapV3Pool public pool;
