@@ -14,8 +14,8 @@ const {
     USDC_ADDRESS
 } = require('../../config/mainnet-fork-test-config');
 
-const vaultFactoryAddress = '0x8013Dd64084e9c9122567563AA86981F4C20576B';
-const riskOnVaultBaseAddress = '0xB83c5F00c01f1662dcc3A1370553f7eCD574Ed88';
+const vaultFactoryAddress = '0x9853Eb1dc3946F78f043EA513Ed87ADBdA6eeE09';
+const riskOnVaultBaseAddress = '0x962D2e6C9Eca21234F7DF0A0D923A0fe1DbBe327';
 const poolAddress = '0x45dDa9cb7c25131DF268515131f647d726f50608';
 
 const main = async () => {
