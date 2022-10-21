@@ -46,8 +46,8 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
     uint32 internal twapDuration;
     uint256 internal period;
     uint256 internal lastTimestamp;
-    uint256 internal token0MinLendAmount;
-    uint256 internal token1MinLendAmount;
+    uint256 public token0MinLendAmount;
+    uint256 public token1MinLendAmount;
 
     /// @notice  net market making amount
     uint256 public override netMarketMakingAmount;
@@ -186,7 +186,7 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
     }
 
     /// @notice Deposit to 3rd pool total assets
-    function depositTo3rdPoolTotalAssets() public view returns (uint256 _totalAssets) {
+    function depositTo3rdPoolTotalAssets() public view override returns (uint256 _totalAssets) {
         (uint256 _amount0, uint256 _amount1) = balanceOfPoolWants(baseMintInfo);
         uint256 amount0 = _amount0;
         uint256 amount1 = _amount1;
@@ -284,6 +284,7 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
     /// @param _totalShares The total amount of shares owned by this strategy
     /// @return _redeemBalance The balance of redeem
     function redeem(uint256 _redeemShares, uint256 _totalShares) external isOwner override returns (uint256 _redeemBalance) {
+        require(baseMintInfo.tokenId > 0 || limitMintInfo.tokenId > 0 || balanceOfToken(wantToken) > 0 || balanceOfToken(borrowToken) > 0, "CNR");
         _redeemBalance = redeemToVault(_redeemShares, _totalShares);
         if (_redeemBalance > netMarketMakingAmount) {
             netMarketMakingAmount = 0;
@@ -299,6 +300,7 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
     /// @param _totalShares The total amount of shares owned by this strategy
     /// @return _redeemBalance The balance of redeem
     function redeemToVaultByKeeper(uint256 _redeemShares, uint256 _totalShares) external override returns (uint256 _redeemBalance) {
+        require(baseMintInfo.tokenId > 0 || limitMintInfo.tokenId > 0, "CNRTVBK");
         _redeemBalance = redeemToVault(_redeemShares, _totalShares);
         emit RedeemToVault(_redeemBalance);
     }
@@ -373,8 +375,8 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
     /// @notice Rebalance the position of this strategy
     /// Requirements: only keeper can call
     function borrowRebalance() external whenNotEmergency nonReentrant override isKeeper {
-        console.log('111111111111111111111111111');
         (uint256 _totalCollateral, uint256 _totalDebt, , , ,) = uniswapV3RiskOnHelper.borrowInfo(address(this));
+        require(_totalCollateral > 0 || _totalDebt > 0, "CNBR");
         console.log('borrowRebalance _totalCollateral: %d, _totalDebt: %d', _totalCollateral, _totalDebt);
 
         if (_totalDebt.mul(10000).div(_totalCollateral) >= 7500) {
@@ -387,7 +389,7 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
             }
             __repay(repayAmount);
         }
-        if (_totalDebt.mul(10000).div(_totalCollateral) <= 3750) {
+        if (_totalDebt.mul(10000).div(_totalCollateral) <= 4000) {
             console.log('borrowRebalance priceOracleGetter.getAssetPrice:%d', uniswapV3RiskOnHelper.calcAaveBaseCurrencyValueInAsset((_totalCollateral.mul(5000).div(10000) - _totalDebt), borrowToken));
             __borrow(uniswapV3RiskOnHelper.calcAaveBaseCurrencyValueInAsset((_totalCollateral.mul(5000).div(10000) - _totalDebt), borrowToken));
         }
@@ -420,6 +422,7 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
     /// @notice Rebalance the position of this strategy
     /// Requirements: only keeper can call
     function rebalanceByKeeper() external whenNotEmergency nonReentrant override isKeeper {
+        require(baseMintInfo.tokenId > 0 || limitMintInfo.tokenId > 0, "CNRBK");
         (, int24 _tick,,,,,) = pool.slot0();
         require(shouldRebalance(_tick), "NR");
         rebalance(_tick);
@@ -589,31 +592,31 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
 
     /// @dev Sets the manageFeeBps to the percentage of deposit that should be received in basis points.
     /// Requirements: only vault manager can call
-    function setManageFeeBps(uint256 _basis) external isVaultManager {
+    function setManageFeeBps(uint256 _basis) external isVaultManager override {
         require(_basis <= 1000, "MFBCE");
         manageFeeBps = _basis;
+        emit ManageFeeBpsChanged(_basis);
+    }
+
+    /// @dev Sets the profitFeeBps to the percentage of yield that should be received in basis points.
+    function setProfitFeeBps(uint256 _basis) external isVaultManager override {
+        require(_basis <= 5000, "PFBCE");
+        profitFeeBps = _basis;
         emit ProfitFeeBpsChanged(_basis);
     }
 
     /// @dev Sets the token0MinLendAmount to lend.
     /// Requirements: only vault manager can call
-    function setToken0MinLendAmount(uint256 _minLendAmount) external isVaultManager {
+    function setToken0MinLendAmount(uint256 _minLendAmount) external isVaultManager override {
         token0MinLendAmount = _minLendAmount;
         emit SetToken0MinLendAmount(_minLendAmount);
     }
 
     /// @dev Sets the token1MinLendAmount to lend.
     /// Requirements: only vault manager can call
-    function setToken1MinLendAmount(uint256 _minLendAmount) external isVaultManager {
+    function setToken1MinLendAmount(uint256 _minLendAmount) external isVaultManager override {
         token1MinLendAmount = _minLendAmount;
         emit SetToken1MinLendAmount(_minLendAmount);
-    }
-
-    /// @dev Sets the profitFeeBps to the percentage of yield that should be received in basis points.
-    function setProfitFeeBps(uint256 _basis) external isVaultManager {
-        require(_basis <= 5000, "PFBCE");
-        profitFeeBps = _basis;
-        emit ProfitFeeBpsChanged(_basis);
     }
 
     modifier isOwner() {

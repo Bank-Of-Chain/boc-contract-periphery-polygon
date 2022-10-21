@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 interface IUniswapV3RiskOnVault {
+
     /// @param tokenId The tokenId of V3 LP NFT minted
     /// @param _tickLower The lower tick of the position in which to add liquidity
     /// @param _tickUpper The upper tick of the position in which to add liquidity
@@ -15,6 +16,9 @@ interface IUniswapV3RiskOnVault {
 
     /// @param _shutdown The new boolean value of the emergency shutdown switch
     event SetEmergencyShutdown(bool _shutdown);
+
+    /// @param _basis The manage fee bps changed
+    event ManageFeeBpsChanged(uint256 _basis);
 
     /// @param _basis The profit fee bps changed
     event ProfitFeeBpsChanged(uint256 _basis);
@@ -40,14 +44,20 @@ interface IUniswapV3RiskOnVault {
     /// @param _redeemAmount The amount of redeem
     event RedeemToVault(uint256 _redeemAmount);
 
-    /// @notice Version of strategy
-    function getVersion() external pure returns (string memory);
-
     /// @notice Emergency shutdown
     function emergencyShutdown() external view returns (bool);
 
     /// @notice Net market making amount
     function netMarketMakingAmount() external view returns (uint256);
+
+    /// @notice Version of strategy
+    function getVersion() external pure returns (string memory);
+
+    /// @notice Get token0 address of uniswap V3 pool invested by this vault
+    function token0() external pure returns (address);
+
+    /// @notice Get token1 address of uniswap V3 pool invested by this vault
+    function token1() external pure returns (address);
 
     /// @notice Gets the statuses about uniswap V3
     function getStatus() external view returns (address _owner, address _wantToken, int24 _baseThreshold, int24 _limitThreshold, int24 _minTickMove, int24 _maxTwapDeviation, int24 _lastTick, int24 _tickSpacing, uint256 _period, uint256 _lastTimestamp, uint32 _twapDuration);
@@ -57,13 +67,10 @@ interface IUniswapV3RiskOnVault {
 
     /// @notice Total assets
     function estimatedTotalAssets() external view returns (uint256 _totalAssets);
-    
-    /// @notice Get token0 address of uniswap V3 pool invested by this vault
-    function token0() external pure returns (address);
 
-    /// @notice Get token1 address of uniswap V3 pool invested by this vault
-    function token1() external pure returns (address);
-    
+    /// @notice Deposit to 3rd pool total assets
+    function depositTo3rdPoolTotalAssets() external view returns (uint256 _totalAssets);
+
     /// @notice Harvests the Strategy
     function harvest() external returns (address[] memory _rewardsTokens, uint256[] memory _claimAmounts);
 
@@ -87,6 +94,18 @@ interface IUniswapV3RiskOnVault {
 
     /// @notice Shutdown the vault when an emergency occurs
     function setEmergencyShutdown(bool _active) external;
+
+    /// @notice Sets the manageFeeBps to the percentage of deposit that should be received in basis points
+    function setManageFeeBps(uint256 _basis) external;
+
+    /// @notice Sets the profitFeeBps to the percentage of yield that should be received in basis points
+    function setProfitFeeBps(uint256 _basis) external;
+
+    /// @notice Sets the token0MinLendAmount to lend.
+    function setToken0MinLendAmount(uint256 _minLendAmount) external;
+
+    /// @notice Sets the token1MinLendAmount to lend.
+    function setToken1MinLendAmount(uint256 _minLendAmount) external;
 
     /// @notice Sets `baseThreshold` state variable
     /// Requirements: only vault manager  can call
