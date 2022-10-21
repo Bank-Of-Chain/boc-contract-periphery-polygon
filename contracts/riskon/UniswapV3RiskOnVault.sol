@@ -591,7 +591,7 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
     /// Requirements: only vault manager can call
     function setManageFeeBps(uint256 _basis) external isVaultManager {
         require(_basis <= 1000, "MFBCE");
-        profitFeeBps = _basis;
+        manageFeeBps = _basis;
         emit ProfitFeeBpsChanged(_basis);
     }
 
