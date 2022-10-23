@@ -388,18 +388,20 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
                 console.log('borrowRebalance after balanceOfToken(token0):%d, balanceOfToken(token1):%d, else', balanceOfToken(token0()), balanceOfToken(token1()));
             }
             __repay(repayAmount);
+            (, int24 _tick,,,,,) = pool.slot0();
+            depositTo3rdPool(_tick);
         }
         if (_totalDebt.mul(10000).div(_totalCollateral) <= 4000) {
             console.log('borrowRebalance priceOracleGetter.getAssetPrice:%d', uniswapV3RiskOnHelper.calcAaveBaseCurrencyValueInAsset((_totalCollateral.mul(5000).div(10000) - _totalDebt), borrowToken));
             __borrow(uniswapV3RiskOnHelper.calcAaveBaseCurrencyValueInAsset((_totalCollateral.mul(5000).div(10000) - _totalDebt), borrowToken));
+            (, int24 _tick,,,,,) = pool.slot0();
+            rebalance(_tick);
         }
         //        (_totalCollateral, _totalDebt, _availableBorrowsETH, _currentLiquidationThreshold, _ltv, _healthFactor) = borrowInfo();
         //        console.log('----------------%d,%d', _totalCollateral, _totalDebt);
         //        console.log('----------------%d,%d', _availableBorrowsETH, _currentLiquidationThreshold);
         //        console.log('----------------%d,%d', _ltv, _healthFactor);
         //        console.log('----------------%d', getCurrentBorrow());
-        (, int24 _tick,,,,,) = pool.slot0();
-        rebalance(_tick);
     }
 
     /// @notice Burn all liquidity
