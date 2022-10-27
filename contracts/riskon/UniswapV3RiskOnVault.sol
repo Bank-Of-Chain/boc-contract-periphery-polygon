@@ -171,19 +171,19 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
         }
     }
 
-//    function getDepositTo3rdPoolPositionDetail() public view returns (address[] memory _tokens, uint256[] memory _amounts) {
-//        _tokens = new address[](2);
-//        _tokens[0] = token0();
-//        _tokens[1] = token1();
-//        _amounts = new uint256[](4);
-//        (uint256 _amount0, uint256 _amount1) = balanceOfPoolWants(baseMintInfo);
-//        _amounts[0] = _amount0;
-//        _amounts[1] = _amount1;
-//        (_amount0, _amount1) = balanceOfPoolWants(limitMintInfo);
-//        _amounts[2] += _amount0;
-//        _amounts[3] += _amount1;
-//        console.log('----------------balanceOfPoolWants _amounts[0]:%d _amounts[1]:%d', _amounts[0], _amounts[1]);
-//    }
+    function getDepositTo3rdPoolPositionDetail() public view returns (address[] memory _tokens, uint256[] memory _amounts) {
+        _tokens = new address[](2);
+        _tokens[0] = token0();
+        _tokens[1] = token1();
+        _amounts = new uint256[](4);
+        (uint256 _amount0, uint256 _amount1) = balanceOfPoolWants(baseMintInfo);
+        _amounts[0] = _amount0;
+        _amounts[1] = _amount1;
+        (_amount0, _amount1) = balanceOfPoolWants(limitMintInfo);
+        _amounts[2] += _amount0;
+        _amounts[3] += _amount1;
+        console.log('----------------balanceOfPoolWants _amounts[0]:%d _amounts[1]:%d', _amounts[0], _amounts[1]);
+    }
 
     /// @notice Deposit to 3rd pool total assets
     function depositTo3rdPoolTotalAssets() public view override returns (uint256 _totalAssets) {
