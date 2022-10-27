@@ -136,6 +136,23 @@ async function topUpDaiByAddress (amount = new BigNumber(10).pow(18), toAddress)
     return amount
 }
 
+async function topUpWethByAddress (amount = new BigNumber(10).pow(18), toAddress) {
+    if (isEmpty(toAddress)) return 0
+    const token = await IEREC20_DAI.at(addresses.WETH_ADDRESS)
+    const tokenName = await token.symbol()
+    const tokenOwner = "0xA6FA4fB5f76172d178d61B04b0ecd319C5d1C0aa"
+    const nextAmount = new BigNumber(amount)
+    const nextAmountInHex = web3.utils.padLeft(web3.utils.toHex(amount), 64)
+    await sendEthers(tokenOwner)
+    console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
+    const callback = await impersonates([tokenOwner])
+    await token.deposit(toAddress, nextAmountInHex, {from: tokenOwner})
+    console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await token.balanceOf(toAddress)).toFormat())
+    console.log(`${tokenName} recharge completed`)
+    await callback()
+    return amount
+}
+
 /**
  * Top up a certain amount of Stg for a certain address(default 10 ** 18)
  */
@@ -389,6 +406,7 @@ module.exports = {
     topUpMain,
     topUpUsdtByAddress,
     topUpDaiByAddress,
+    topUpWethByAddress,
     topUpUsdcByAddress,
     topUpTusdByAddress,
     topUpQIByAddress,

@@ -49,7 +49,7 @@
     "bignumber.js": "^9.0.1",
     "eslint-plugin-mocha": "^9.0.0",
     "piggy-finance-utils": "^1.0.52",
-    "boc-contract-core": "^1.3.0"
+    "boc-contract-core": "1.6.0-beta3"
   },
   "scripts": {
     "chain": "hardhat node --hostname 0.0.0.0",
@@ -60,6 +60,13 @@
     "deploy_v1.5.4": "yarn topup && npm run grant && hardhat run scripts/deploy_v1.5.4.js --network localhost",
     "migrate-usdi-to-pegtoken": "yarn topup && yarn grant && yarn update-aggregator && hardhat run scripts/migrate-usdi-to-pegtoken.js --network localhost",
     "deploy_v1.5.9": "yarn topup && yarn grant && yarn update-aggregator && hardhat run scripts/deploy_v1.5.9.js --network localhost",
+    "deploy_risk_on": "yarn topup && hardhat run scripts/deploy-risk-on.js --network localhost",
+    "create-risk-on-usdc-vault": "hardhat run scripts/riskon/create-risk-on-usdc-vault.js --network localhost",
+    "mock-aave-price-oracle": "hardhat run scripts/riskon/mock-aave-price-oracle.js --network localhost",
+    "aave-price-oracle-update": "hardhat run scripts/riskon/aave-price-oracle-update.js --network localhost",
+    "mock-uniswap-v3-usdc-swap": "hardhat run scripts/riskon/mock-uniswap-v3-usdc-swap.js --network localhost",
+    "mock-uniswap-v3-weth-swap": "hardhat run scripts/riskon/mock-uniswap-v3-weth-swap.js --network localhost",
+    "risk-on-main-process": "hardhat run scripts/riskon/risk-on-main-process.js --network localhost",
     "lend": "hardhat run scripts/simple-lend.js --network localhost",
     "lint:sol": "solhint --config ./.solhint.json --max-warnings 0 \"contracts/**/*.sol\"",
     "release": "hardhat run scripts/deploy.js --network mainnet",
