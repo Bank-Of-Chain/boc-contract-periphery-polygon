@@ -25,7 +25,7 @@ describe('【UniswapV3UsdcWeth500RiskOnVault Vault Checker】', function () {
         const mockUniswapV3Router = await MockUniswapV3Router.new();
         const uniswapV3UsdcWeth500RiskOnVault = await UniswapV3UsdcWeth500RiskOnVault.at(vault);
 
-        let twap = new BigNumber(await uniswapV3UsdcWeth500RiskOnVault.getTwap());
+        let twap = new BigNumber(await uniswapV3UsdcWeth500RiskOnVault.getTwap("0x45dDa9cb7c25131DF268515131f647d726f50608", 60));
         console.log('before swap twap: %s', twap.toFixed());
 
         const wantToken = await uniswapV3UsdcWeth500RiskOnVault.wantToken();
@@ -35,7 +35,7 @@ describe('【UniswapV3UsdcWeth500RiskOnVault Vault Checker】', function () {
         await mockUniswapV3Router.swap("0x45dDa9cb7c25131DF268515131f647d726f50608", true, new BigNumber(10).pow(6).multipliedBy(new BigNumber(10).pow(wantTokenDecimals)), {"from": investor});
 
         // await advanceBlock(1);
-        twap = new BigNumber(await uniswapV3UsdcWeth500RiskOnVault.getTwap());
+        twap = new BigNumber(await uniswapV3UsdcWeth500RiskOnVault.getTwap("0x45dDa9cb7c25131DF268515131f647d726f50608", 60));
         console.log('after swap twap: %s', twap.toFixed());
 
         await topUp.topUpUsdcByAddress(new BigNumber(10).pow(10), vault);
@@ -52,7 +52,7 @@ describe('【UniswapV3UsdcWeth500RiskOnVault Vault Checker】', function () {
 
         // await advanceBlock(1);
 
-        twap = new BigNumber(await uniswapV3UsdcWeth500RiskOnVault.getTwap());
+        twap = new BigNumber(await uniswapV3UsdcWeth500RiskOnVault.getTwap("0x45dDa9cb7c25131DF268515131f647d726f50608", 60));
         console.log('after rebalance swap twap: %s', twap.toFixed());
 
         pendingRewards = await uniswapV3UsdcWeth500RiskOnVault.harvest.call({

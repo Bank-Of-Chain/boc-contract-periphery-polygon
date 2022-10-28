@@ -56,7 +56,7 @@ const config = {
             },
             forking: {
                 url: 'https://polygon-mainnet.g.alchemy.com/v2/' + keys.alchemyKey.dev,
-                blockNumber: 34000000,
+                blockNumber: 34476478,
             },
             timeout: 1800000,
             allowUnlimitedContractSize: true,

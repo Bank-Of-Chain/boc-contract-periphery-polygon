@@ -221,17 +221,22 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
         _claimAmounts = new uint256[](2);
         uint256 _amount0;
         uint256 _amount1;
+        console.log('----------------harvest balanceOfToken(wantToken):%d balanceOfToken(borrowToken):%d', balanceOfToken(wantToken), balanceOfToken(borrowToken));
+        console.log(baseMintInfo.tokenId);
         if (baseMintInfo.tokenId > 0) {
             (_amount0, _amount1) = __collectAll(baseMintInfo.tokenId);
+            console.log('----------------harvest baseMintInfo _amount0:%d _amount1:%d', _amount0, _amount1);
             _claimAmounts[0] += _amount0;
             _claimAmounts[1] += _amount1;
         }
+        console.log(limitMintInfo.tokenId);
         if (limitMintInfo.tokenId > 0) {
             (_amount0, _amount1) = __collectAll(limitMintInfo.tokenId);
+            console.log('----------------harvest limitMintInfo _amount0:%d _amount1:%d', _amount0, _amount1);
             _claimAmounts[0] += _amount0;
             _claimAmounts[1] += _amount1;
         }
-
+        console.log('----------------harvest balanceOfToken(wantToken):%d balanceOfToken(borrowToken):%d', balanceOfToken(wantToken), balanceOfToken(borrowToken));
         if (profitFeeBps > 0 && address(treasury) != address(0)) {
             if (_claimAmounts[0] > 0) {
                 uint256 claimAmount0Fee = _claimAmounts[0] * profitFeeBps / 10000;
@@ -538,7 +543,7 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
     /// @param _amount0 The amount of token0
     /// @param _amount1 The amount of token1
     /// @return The liquidity being valued
-    function getLiquidityForAmounts(int24 _tickLower, int24 _tickUpper, uint256 _amount0, uint256 _amount1) internal view returns (uint128) {
+    function getLiquidityForAmounts(int24 _tickLower, int24 _tickUpper, uint256 _amount0, uint256 _amount1) public view returns (uint128) {
         (uint160 _sqrtPriceX96, , , , , ,) = pool.slot0();
         return LiquidityAmounts.getLiquidityForAmounts(_sqrtPriceX96, TickMath.getSqrtRatioAtTick(_tickLower), TickMath.getSqrtRatioAtTick(_tickUpper), _amount0, _amount1);
     }

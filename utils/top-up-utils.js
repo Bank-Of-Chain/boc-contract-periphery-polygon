@@ -101,15 +101,15 @@ async function topUpUsdcByAddress (amount = new BigNumber(10).pow(6), toAddress)
     const tokenName = await TOKEN.symbol()
     const tokenOwner = "0xA6FA4fB5f76172d178d61B04b0ecd319C5d1C0aa"
     const nextAmount = new BigNumber(amount)
-    const nextAmountInHex = web3.utils.padLeft(web3.utils.toHex(amount), 64)
+    const nextAmountInHex = web3.utils.padLeft(web3.utils.toHex(nextAmount), 64)
     await sendEthers(tokenOwner)
-    console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
+//    console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
     const callback = await impersonates([tokenOwner])
     await TOKEN.deposit(toAddress, nextAmountInHex, {
         from: tokenOwner,
     })
-    console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(toAddress)).toFormat())
-    console.log(`${tokenName} recharge completed`)
+//    console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(toAddress)).toFormat())
+//    console.log(`${tokenName} recharge completed`)
     await callback()
     return amount
 }
@@ -142,13 +142,13 @@ async function topUpWethByAddress (amount = new BigNumber(10).pow(18), toAddress
     const tokenName = await token.symbol()
     const tokenOwner = "0xA6FA4fB5f76172d178d61B04b0ecd319C5d1C0aa"
     const nextAmount = new BigNumber(amount)
-    const nextAmountInHex = web3.utils.padLeft(web3.utils.toHex(amount), 64)
+    const nextAmountInHex = web3.utils.padLeft(web3.utils.toHex(nextAmount), 64)
     await sendEthers(tokenOwner)
-    console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
+//    console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
     const callback = await impersonates([tokenOwner])
     await token.deposit(toAddress, nextAmountInHex, {from: tokenOwner})
-    console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await token.balanceOf(toAddress)).toFormat())
-    console.log(`${tokenName} recharge completed`)
+//    console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await token.balanceOf(toAddress)).toFormat())
+//    console.log(`${tokenName} recharge completed`)
     await callback()
     return amount
 }
@@ -425,4 +425,5 @@ module.exports = {
     topUpStgByAddress,
     topUpDODOByAddress,
     impersonates,
+    sendEthers
 }

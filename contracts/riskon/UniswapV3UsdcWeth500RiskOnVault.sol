@@ -14,8 +14,8 @@ contract UniswapV3UsdcWeth500RiskOnVault is IUniswapV3RiskOnVaultInitialize, Uni
         // https://info.uniswap.org/#/polygon/pools/0x45dda9cb7c25131df268515131f647d726f50608
             address(0x45dDa9cb7c25131DF268515131f647d726f50608),
             2,
-            3600,
-            1200,
+            2400,
+            800,
         // ~12 hours
             41400,
             0,
