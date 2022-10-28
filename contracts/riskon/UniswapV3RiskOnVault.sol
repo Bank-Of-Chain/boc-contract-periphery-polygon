@@ -170,19 +170,6 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
         }
     }
 
-    function getDepositTo3rdPoolPositionDetail() public view returns (address[] memory _tokens, uint256[] memory _amounts) {
-        _tokens = new address[](2);
-        _tokens[0] = token0();
-        _tokens[1] = token1();
-        _amounts = new uint256[](4);
-        (uint256 _amount0, uint256 _amount1) = balanceOfPoolWants(baseMintInfo);
-        _amounts[0] = _amount0;
-        _amounts[1] = _amount1;
-        (_amount0, _amount1) = balanceOfPoolWants(limitMintInfo);
-        _amounts[2] += _amount0;
-        _amounts[3] += _amount1;
-    }
-
     /// @notice Deposit to 3rd pool total assets
     function depositTo3rdPoolTotalAssets() public view override returns (uint256 _totalAssets) {
         (uint256 _amount0, uint256 _amount1) = balanceOfPoolWants(baseMintInfo);
@@ -315,7 +302,6 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
     /// @return _redeemBalance The balance of redeem
     function redeemToVault(uint256 _redeemShares, uint256 _totalShares) internal whenNotEmergency nonReentrant returns (uint256 _redeemBalance) {
         uint256 currentBorrow = uniswapV3RiskOnHelper.getCurrentBorrow(borrowToken, interestRateMode, address(this));
-        (uint256 _totalCollateral, , , , ,) = uniswapV3RiskOnHelper.borrowInfo(address(this));
         address aCollateralToken = uniswapV3RiskOnHelper.getAToken(wantToken);
         if (_redeemShares == _totalShares) {
             harvest();
@@ -334,9 +320,6 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
             uint256 beforeBorrowTokenBalance = balanceOfToken(borrowToken);
             withdraw(baseMintInfo.tokenId, _redeemShares, _totalShares);
             withdraw(limitMintInfo.tokenId, _redeemShares, _totalShares);
-            //            uint256 redeemVaultWantTokenBalance = beforeWantTokenBalance * _redeemShares / _totalShares;
-            //            uint256 redeemVaultBorrowTokenBalance = beforeBorrowTokenBalance * _redeemShares / _totalShares;
-            //            uint256 redeemWantTokenBalance = afterWantTokenBalance - beforeWantTokenBalance;
             uint256 redeemBorrowTokenBalance = balanceOfToken(borrowToken) - beforeBorrowTokenBalance;
             uint256 redeemCurrentBorrow = currentBorrow * _redeemShares / _totalShares;
             if (redeemCurrentBorrow > redeemBorrowTokenBalance) {

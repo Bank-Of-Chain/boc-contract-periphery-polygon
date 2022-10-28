@@ -150,11 +150,4 @@ contract VaultFactory is Initializable, AccessControlMixin, ReentrancyGuardUpgra
     function getStablecoinInvestorByIndex(uint256 _index) external view returns(address) {
         return stablecoinInvestorSet.at(_index);
     }
-
-    /// @notice Only for test.
-    ///         To be deleted before merge to master branch
-    function deleteVaultAddressMapForDebug(address _user, address _vaultImpl, uint256 _index) external {
-        //delete vaultAddressMap fro debug 
-        delete vaultAddressMap[_user][_vaultImpl][_index];
-    }
 }

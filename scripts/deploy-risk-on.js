@@ -13,9 +13,6 @@ const inquirer = require('inquirer');
 
 const MFC_TEST = require('../config/mainnet-fork-test-config');
 const MFC_PRODUCTION = require('../config/mainnet-fork-config');
-const {
-	strategiesList
-} = require('../config/strategy-config.js');
 
 const {
 	deploy,
@@ -34,10 +31,6 @@ const WETH_ADDRESS = 'WETH_ADDRESS';
 // Used to store address information during deployment
 // ** Note that if an address is configured in this object, no publishing operation will be performed.
 const addressMap = {
-	...reduce(strategiesList, (rs, i) => {
-		rs[i.name] = '';
-		return rs
-	}, {}),
 	[UniswapV3UsdcWeth500RiskOnVault]: '',
 	[AccessControlProxy]: '',
 	[UniswapV3RiskOnHelper]: '',
