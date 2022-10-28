@@ -11,34 +11,52 @@ const ProxyAdmin = hre.artifacts.require('@openzeppelin/contracts/proxy/transpar
 
 async function main() {
     // Production vault address
-    const vaultAddress = '0xd3feAe6c4fdfDE73Bd2fE99c8fE6944904DAA68A'
+    const vaultAddress = '0x30D120f80D60E7b58CA9fFaf1aaB1815f000B7c3'
     // Production administrator account, need to be disguised
-    const admin = '0xc791B4A9B10b1bDb5FBE2614d389f0FE92105279'
+    const admin = '0x4fd4c98babee5e22219c573713308329da40649d'
     await impersonates([admin])
 
     const accounts = await ethers.getSigners();
-    const nextManagement = accounts[0].address;
+    const governor = accounts[0].address;
+    const delegator = accounts[17].address;
+    const vaultManager = accounts[18].address;
     const keeper = accounts[19].address;
 
     // get vault's accessControlProxy
     const accessControlProxyAddress = await (await Vault.at(vaultAddress)).accessControlProxy()
     console.log('access control proxy address：', accessControlProxyAddress)
-    // Add account[0] to the administrator privilege group
+    // add account[0] to admin
     const constract = await AccessControlProxy.at(accessControlProxyAddress)
 
-    const govRole = await constract.DEFAULT_ADMIN_ROLE()
-    await constract.grantRole(govRole, nextManagement, {
+    const defaultAdminRole = await constract.DEFAULT_ADMIN_ROLE()
+    await constract.grantRole(defaultAdminRole, governor, {
         from: admin
     })
 
-    const role = await constract.VAULT_ROLE()
-    console.log('Permissions：', role)
+    const delegateRole = await constract.DELEGATE_ROLE()
+    await constract.grantRole(delegateRole, delegator, {
+        from: admin
+    })
+    await constract.grantRole(delegateRole, governor, {
+        from: admin
+    })
+
+    const vaultRole = await constract.VAULT_ROLE();
+    const keeperRole = await constract.KEEPER_ROLE();
+    console.log('Permissions：', vaultRole)
+    console.log('Permissions：', keeperRole)
     try {
-        await constract.grantRole(role, nextManagement, {
-            from: admin
+        await constract.grantRole(vaultRole, vaultManager, {
+            from: governor
         })
-        await constract.grantRole(role, keeper, {
-            from: admin
+        await constract.grantRole(vaultRole, governor, {
+            from: governor
+        })
+        await constract.grantRole(keeperRole, keeper, {
+            from: governor
+        })
+        await constract.grantRole(keeperRole, governor, {
+            from: governor
         })
         console.log('Add permission successfully!')
     } catch (e) {
@@ -46,13 +64,17 @@ async function main() {
     }
     // Determine whether the permission is added successfully
     console.log('Permission verification admin：', await constract.isVaultOrGov(admin))
-    console.log('Permission Verification nextManagement：', await constract.isVaultOrGov(nextManagement))
+    console.log('Permission Verification governor：', await constract.isGovOrDelegate(governor))
+    console.log('Permission Verification delegator：', await constract.isGovOrDelegate(delegator))
+    console.log('Permission Verification vaultManager：', await constract.isVaultOrGov(vaultManager))
+    console.log('Permission Verification keeper：', await constract.isKeeperOrVaultOrGov(keeper))
 
     console.log('Transferring ownership of ProxyAdmin...');
-    const proxyAdmin = await ProxyAdmin.at('0x2BFe17F338Cb4554FDb949ddA5798c903c4a179A');
+    const proxyAdmin = await ProxyAdmin.at('0xFa738A66B5531F20673eE2189CF4C0E5CB97Cd33');
+    // console.log('proxyAdmin owner', await proxyAdmin);
     // The owner of the ProxyAdmin can upgrade our contracts
-    await proxyAdmin.transferOwnership(nextManagement, {from: admin});
-    console.log('Transferred ownership of ProxyAdmin to:', nextManagement);
+    await proxyAdmin.transferOwnership(governor, {from: admin});
+    console.log('Transferred ownership of ProxyAdmin to:', governor);
 }
 
 main()

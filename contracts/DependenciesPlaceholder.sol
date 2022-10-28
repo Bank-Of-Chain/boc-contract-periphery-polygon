@@ -13,4 +13,5 @@ import "boc-contract-core/contracts/price-feeds/primitives/ChainlinkPriceFeed.so
 import "boc-contract-core/contracts/price-feeds/derivatives/AggregatedDerivativePriceFeed.sol";
 import "boc-contract-core/contracts/price-feeds/ValueInterpreter.sol";
 import "boc-contract-core/contracts/exchanges/ExchangeAggregator.sol";
+import "boc-contract-core/contracts/exchanges/adapters/TestAdapter.sol";
 import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";

@@ -4,11 +4,15 @@ pragma solidity >=0.6.0 <0.8.0;
 pragma experimental ABIEncoderV2;
 
 import "../../external/paraswap/IParaswapV5.sol";
-import "../AssetHelpersOldVersion.sol";
+import "../utils/ExchangeHelpers.sol";
+import "@openzeppelin/contracts~v3/math/SafeMath.sol";
+import "@openzeppelin/contracts~v3/token/ERC20/SafeERC20.sol";
 
-import "hardhat/console.sol";
+abstract contract ParaSwapV5ActionsMixin is ExchangeHelpers {
 
-abstract contract ParaSwapV5ActionsMixin is AssetHelpersOldVersion {
+    using SafeERC20 for IERC20;
+    using SafeMath for uint256;
+
     address internal constant PARA_SWAP_V5_AUGUSTUS_SWAPPER = 0xDEF171Fe48CF0115B1d80b88dc8eAB59176FEe57;
     address internal constant PARA_SWAP_V5_TOKEN_TRANSFER_PROXY = 0x216B4B4Ba9F3e719726886d34a177484278Bfcae;
 
@@ -68,12 +72,6 @@ abstract contract ParaSwapV5ActionsMixin is AssetHelpersOldVersion {
             PARA_SWAP_V5_TOKEN_TRANSFER_PROXY,
             _data.fromAmount
         );
-
-        console.log("fromToken", _data.fromToken);
-        console.log("toToken", _data.toToken);
-        console.log("fromAmount", _data.fromAmount);
-        console.log("toAmount", _data.toAmount);
-        console.log("expectedAmount", _data.expectedAmount);
         return IParaswapV5(PARA_SWAP_V5_AUGUSTUS_SWAPPER).simpleSwap(_data);
     }
 
@@ -185,5 +183,24 @@ abstract contract ParaSwapV5ActionsMixin is AssetHelpersOldVersion {
     /// @return The `PARA_SWAP_V5_TOKEN_TRANSFER_PROXY` variable value
     function getParaSwapV5TokenTransferProxy() public pure returns (address) {
         return PARA_SWAP_V5_TOKEN_TRANSFER_PROXY;
+    }
+
+    function __validateFromTokenAmount(address _fromToken, address _srcToken) internal pure {
+        require(_fromToken == _srcToken, "srcToken diff");
+    }
+
+    function __validateToTokenAddress(address _toToken, address _dstToken) internal pure {
+        require(_toToken == _dstToken, "dstToken diff");
+    }
+
+    function __approveAssetMaxAsNeeded(
+        address _asset,
+        address _target,
+        uint256 _neededAmount
+    ) internal {
+        if (IERC20(_asset).allowance(address(this), _target) < _neededAmount) {
+            IERC20(_asset).safeApprove(_target, 0);
+            IERC20(_asset).safeApprove(_target, _neededAmount);
+        }
     }
 }

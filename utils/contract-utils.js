@@ -148,7 +148,7 @@ async function setupCoreProtocolWithMockValueInterpreter (
     // const usdi = await USDi.new()
     // await usdi.initialize("USDi", "USDi", 18, vault.address, accessControlProxy.address)
     const pegToken = await PegToken.new();
-    await pegToken.initialize("Peg Token", "USDi", 18, vault.address, accessControlProxy.address)
+    await pegToken.initialize("USD Peg Token", "USDi", 18, vault.address, accessControlProxy.address)
 
     // treasury
     const treasury = await Treasury.new()
@@ -156,7 +156,7 @@ async function setupCoreProtocolWithMockValueInterpreter (
 
     // VaultBuffer
     const vaultBuffer = await VaultBuffer.new();
-    await vaultBuffer.initialize('USDi Tickets','tUSDi',vault.address,pegToken.address,accessControlProxy.address);
+    await vaultBuffer.initialize('USD Peg Token Ticket', 'tUSDi',vault.address,pegToken.address,accessControlProxy.address);
 
     await vault.initialize(accessControlProxy.address, treasury.address, exchangeAggregator.address, valueInterpreter.address);
 

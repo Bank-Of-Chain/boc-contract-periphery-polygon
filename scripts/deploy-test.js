@@ -19,11 +19,13 @@ const {
 	strategiesList
 } = require('../config/strategy/strategy-config.js');
 
-
 const {
 	deploy,
 	deployProxy
 } = require('../utils/deploy-utils');
+const os = require("os");
+const axios = require('axios');
+const hardhatConfig = require('../hardhat.config');
 
 // === Utils === //
 const VaultContract = hre.artifacts.require("IVault");
@@ -492,7 +494,124 @@ const main = async () => {
 	await addStrategies(cVault, allArray, increaseArray);
 	console.log('getStrategies=', await cVault.getStrategies());
 	console.table(addressMap);
+
+	if (hre.network.name == 'localhost') {
+		console.log('start set apollo config');
+		const {clusterName,host} = await get_apollo_cluster_name();
+		console.log(clusterName,host);
+		const blockNumber = hardhatConfig.networks.hardhat.forking.blockNumber;
+		await modify_apollo_config('boc.networks.polygon.startBlock', blockNumber, clusterName, host);
+		for (let key in addressMap) {
+			if (Object.prototype.hasOwnProperty.call(addressMap, key)) {
+				if (key == 'Vault') {
+					await modify_apollo_config('boc.networks.polygon.vaultAddress', addressMap[key], clusterName, host);
+				} else if (key == 'VaultBuffer') {
+					await modify_apollo_config('boc.networks.polygon.vaultBufferAddress', addressMap[key], clusterName, host);
+				} else if (key == 'PegToken') {
+					await modify_apollo_config('boc.networks.polygon.pegTokenAddress', addressMap[key], clusterName, host);
+				} else if (key == 'TestAdapter') {
+					await modify_apollo_config('boc.networks.polygon.TestAdapter', addressMap[key], clusterName, host);
+				} else if (key == 'Verification') {
+					await modify_apollo_config('boc.networks.polygon.verificationAddress', addressMap[key], clusterName, host);
+				} else if (key == 'Harvester') {
+					await modify_apollo_config('boc.networks.polygon.harvester', addressMap[key], clusterName, host);
+				} else if (key == 'Dripper') {
+					await modify_apollo_config('boc.networks.polygon.dripper', addressMap[key], clusterName, host);
+				} else {
+					await modify_apollo_config(`boc.networks.polygon.${key}`, addressMap[key], clusterName, host);
+				}
+			}
+		}
+
+		await publish_apollo_config(clusterName, host);
+		console.log('end set apollo config');
+	}
 };
+
+const get_apollo_cluster_name = async () =>{
+	let windowsIp = '127.0.0.1';
+	let localIp = windowsIp;
+	let host = '172.31.30.50:8070';
+	const osType = os.type();
+	const netInfo = os.networkInterfaces();
+	if (osType === 'Windows_NT'){
+		host = '13.215.137.222:8070';
+		for (let devName  in netInfo) {
+			const iface = netInfo[devName];
+			for (let i = 0; i < iface.length; i++) {
+				const alias = iface[i];
+				if (alias.family === 'IPv4' && alias.address !== '127.0.0.1' && !alias.internal) {
+					localIp = alias.address;
+					break;
+				}
+			}
+			if(localIp != windowsIp){
+				break;
+			}
+		}
+	} else{
+		localIp = netInfo && netInfo.eth0 && netInfo.eth0.length>0 && netInfo.eth0[0].address || windowsIp;
+	}
+	console.log('localIp',localIp);
+	let url = `http://${host}/openapi/v1/envs/DEV/apps/boc-common/clusters/default/namespaces/boc1.application`;
+	let config = {
+		headers: {
+			Authorization:'e9ac544052e7e295e453f414363e8ccf5ff37ff3',
+			'Content-Type':'application/json;charset=UTF-8'
+		},
+		params: {
+
+		}
+	};
+	let resp =  await axios.get(url, config);
+	const itemData =  resp.data?.items.find(function (item) {
+		return item.key == localIp;
+	});
+	let clusterName = 'local';
+	if(itemData && itemData.value){
+		clusterName = itemData.value;
+	}
+	return {clusterName,host};
+}
+
+const publish_apollo_config = async (clusterName,host) =>{
+	let url = `http://${host}/openapi/v1/envs/DEV/apps/boc-common/clusters/${clusterName}/namespaces/boc1.application/releases`;
+	let questBody = {
+		"releaseTitle": new Date().toLocaleDateString(),
+		"releaseComment": 'publish smart contract',
+		"releasedBy":"apollo"
+	};
+	let config = {
+		headers: {
+			Authorization:'e9ac544052e7e295e453f414363e8ccf5ff37ff3',
+			'Content-Type':'application/json;charset=UTF-8'
+		},
+		params: {
+			createIfNotExists: true
+		}
+	};
+	await axios.post(url, questBody, config);
+}
+
+const modify_apollo_config = async (key,value,clusterName,host) =>{
+	let url = `http://${host}/openapi/v1/envs/DEV/apps/boc-common/clusters/${clusterName}/namespaces/boc1.application/items/${key}`;
+	let questBody = {
+		"key": key,
+		"value": value,
+		"dataChangeLastModifiedBy":"apollo",
+		"dataChangeCreatedBy":"apollo"
+	};
+	let config = {
+		headers: {
+			Authorization:'e9ac544052e7e295e453f414363e8ccf5ff37ff3',
+			'Content-Type':'application/json;charset=UTF-8'
+		},
+		params: {
+			createIfNotExists: true
+		}
+	};
+	await axios.put(url, questBody, config);
+}
 
 main().then(() => process.exit(0))
 	.catch(error => {

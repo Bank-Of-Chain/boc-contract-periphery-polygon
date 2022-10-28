@@ -3,17 +3,16 @@
 pragma solidity >=0.6.0 <0.8.0;
 pragma experimental ABIEncoderV2;
 
-import "../../utils/actions/ParaSwapV5ActionsMixin.sol";
+import "../utils/ParaSwapV5ActionsMixin.sol";
 import "boc-contract-core/contracts/exchanges/IExchangeAdapter.sol";
-import "../utils/ExchangeHelpers.sol";
-import "@openzeppelin/contracts~v3/math/SafeMath.sol";
-import "hardhat/console.sol";
 import "boc-contract-core/contracts/library/RevertReasonParser.sol";
+import "@openzeppelin/contracts~v3/math/SafeMath.sol";
+import "@openzeppelin/contracts~v3/token/ERC20/SafeERC20.sol";
 
 /// @title ParaSwapV4Adapter Contract
 /// @notice Adapter for interacting with ParaSwap (v4)
 /// @dev Does not allow any protocol that collects protocol fees in ETH, e.g., 0x v3
-contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, ExchangeHelpers {
+contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
@@ -44,7 +43,6 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
         SwapDescription calldata _sd
     ) external override payable returns (uint256) {
         require(_method < SWAP_METHOD_SELECTOR.length, "ParaswapAdapter method out of range");
-        console.log("---paraswap swap method", _method);
         bytes4 _selector = SWAP_METHOD_SELECTOR[_method];
         bytes memory _data = abi.encodeWithSelector(_selector, _encodedCallArgs, _sd);
         uint256 _toTokenBefore = IERC20(_sd.dstToken).balanceOf(_sd.receiver);
@@ -63,8 +61,8 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
     {
         Utils.SellData memory _data = abi.decode(_encodedCallArgs, (Utils.SellData));
 
-        __validateFromTokenAmount(_data.fromToken, _sd);
-        __validateToTokenAddress(_data.path[_data.path.length - 1].to, _sd);
+        __validateFromTokenAmount(_data.fromToken, _sd.srcToken);
+        __validateToTokenAddress(_data.path[_data.path.length - 1].to, _sd.dstToken);
 
         _data.expectedAmount = _data.expectedAmount.mul(_sd.amount).div(_data.fromAmount);
         _data.toAmount = _sd.amount.mul(_data.toAmount).div(_data.fromAmount);
@@ -86,10 +84,10 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
             (Utils.MegaSwapSellData)
         );
 
-        __validateFromTokenAmount(_data.fromToken, _sd);
+        __validateFromTokenAmount(_data.fromToken, _sd.srcToken);
         for (uint256 i = 0; i < _data.path.length; i++) {
             Utils.MegaSwapPath memory _megaSwapPath = _data.path[i];
-            __validateToTokenAddress(_megaSwapPath.path[_megaSwapPath.path.length - 1].to, _sd);
+            __validateToTokenAddress(_megaSwapPath.path[_megaSwapPath.path.length - 1].to, _sd.dstToken);
         }
 
         _data.expectedAmount = _data.expectedAmount.mul(_sd.amount).div(_data.fromAmount);
@@ -108,8 +106,8 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
     {
         Utils.SellData memory _data = abi.decode(_encodedCallArgs, (Utils.SellData));
 
-        __validateFromTokenAmount(_data.fromToken, _sd);
-        __validateToTokenAddress(_data.path[_data.path.length - 1].to, _sd);
+        __validateFromTokenAmount(_data.fromToken, _sd.srcToken);
+        __validateToTokenAddress(_data.path[_data.path.length - 1].to, _sd.dstToken);
 
         _data.expectedAmount = _data.expectedAmount.mul(_sd.amount).div(_data.fromAmount);
         _data.toAmount = _sd.amount.mul(_data.toAmount).div(_data.fromAmount);
@@ -130,10 +128,10 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
             (Utils.MegaSwapSellData)
         );
 
-        __validateFromTokenAmount(_data.fromToken, _sd);
+        __validateFromTokenAmount(_data.fromToken, _sd.srcToken);
         for (uint256 i = 0; i < _data.path.length; i++) {
             Utils.MegaSwapPath memory _megaSwapPath = _data.path[i];
-            __validateToTokenAddress(_megaSwapPath.path[_megaSwapPath.path.length - 1].to, _sd);
+            __validateToTokenAddress(_megaSwapPath.path[_megaSwapPath.path.length - 1].to, _sd.dstToken);
         }
 
         _data.expectedAmount = _data.expectedAmount.mul(_sd.amount).div(_data.fromAmount);
@@ -152,8 +150,8 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
     {
         Utils.SimpleData memory _data = abi.decode(_encodedCallArgs, (Utils.SimpleData));
 
-        __validateFromTokenAmount(_data.fromToken, _sd);
-        __validateToTokenAddress(_data.toToken, _sd);
+        __validateFromTokenAmount(_data.fromToken, _sd.srcToken);
+        __validateToTokenAddress(_data.toToken, _sd.dstToken);
 
         _data.expectedAmount = _data.expectedAmount.mul(_sd.amount).div(_data.fromAmount);
         _data.toAmount = _sd.amount.mul(_data.toAmount).div(_data.fromAmount);
@@ -171,8 +169,8 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
     {
         Utils.SimpleData memory _data = abi.decode(_encodedCallArgs, (Utils.SimpleData));
 
-        __validateFromTokenAmount(_data.fromToken, _sd);
-        __validateToTokenAddress(_data.toToken, _sd);
+        __validateFromTokenAmount(_data.fromToken, _sd.srcToken);
+        __validateToTokenAddress(_data.toToken, _sd.dstToken);
 
         _data.expectedAmount = _data.expectedAmount.mul(_sd.amount).div(_data.fromAmount);
         _data.toAmount = _sd.amount.mul(_data.toAmount).div(_data.fromAmount);
@@ -196,8 +194,8 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
 
         address _toToken = _path[_path.length - 1];
 
-        __validateFromTokenAmount(_path[0], _sd);
-        __validateToTokenAddress(_toToken, _sd);
+        __validateFromTokenAmount(_path[0], _sd.srcToken);
+        __validateToTokenAddress(_toToken, _sd.dstToken);
 
         _amountOutMin = _sd.amount.mul(_amountOutMin).div(_amountIn);
         _amountIn = _sd.amount;
@@ -225,8 +223,8 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
 
         address _toToken = _path[_path.length - 1];
 
-        __validateFromTokenAmount(_path[0], _sd);
-        __validateToTokenAddress(_toToken, _sd);
+        __validateFromTokenAmount(_path[0], _sd.srcToken);
+        __validateToTokenAddress(_toToken, _sd.dstToken);
 
         _amountOutMin = _sd.amount.mul(_amountOutMin).div(_amountIn);
         _amountIn = _sd.amount;
@@ -252,7 +250,7 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
             uint256[] memory _pools
         ) = __decodeSwapOnUniswapV2ForkArgs(_encodedCallArgs);
 
-        __validateFromTokenAmount(_tokenIn, _sd);
+        __validateFromTokenAmount(_tokenIn, _sd.srcToken);
 
         _amountOutMin = _sd.amount.mul(_amountOutMin).div(_amountIn);
         _amountIn = _sd.amount;
@@ -319,8 +317,8 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
             bytes memory _payload
         ) = __decodeSwapOnZeroXv2Args(_encodedCallArgs);
 
-        __validateFromTokenAmount(_fromToken, _sd);
-        __validateToTokenAddress(_toToken, _sd);
+        __validateFromTokenAmount(_fromToken, _sd.srcToken);
+        __validateToTokenAddress(_toToken, _sd.dstToken);
 
         _amountOutMin = _sd.amount.mul(_amountOutMin).div(_fromAmount);
         _fromAmount = _sd.amount;
@@ -369,8 +367,8 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter, Exchange
             bytes memory _payload
         ) = __decodeSwapOnZeroXv4Args(_encodedCallArgs);
 
-        __validateFromTokenAmount(_fromToken, _sd);
-        __validateToTokenAddress(_toToken, _sd);
+        __validateFromTokenAmount(_fromToken, _sd.srcToken);
+        __validateToTokenAddress(_toToken, _sd.dstToken);
 
         _amountOutMin = _sd.amount.mul(_amountOutMin).div(_fromAmount);
         _fromAmount = _sd.amount;
