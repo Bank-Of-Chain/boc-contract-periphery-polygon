@@ -17,7 +17,6 @@ import "./../external/uniswap/IUniswapV3.sol";
 import './../external/uniswapv3/INonfungiblePositionManager.sol';
 import './../external/uniswapv3/libraries/LiquidityAmounts.sol';
 import './../enums/ProtocolEnum.sol';
-import 'hardhat/console.sol';
 import "../utils/actions/AaveLendActionMixin.sol";
 import "../utils/actions/UniswapV3LiquidityActionsMixin.sol";
 import "./UniswapV3RiskOnHelper.sol";
@@ -182,7 +181,6 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
         (_amount0, _amount1) = balanceOfPoolWants(limitMintInfo);
         _amounts[2] += _amount0;
         _amounts[3] += _amount1;
-        console.log('----------------balanceOfPoolWants _amounts[0]:%d _amounts[1]:%d', _amounts[0], _amounts[1]);
     }
 
     /// @notice Deposit to 3rd pool total assets
@@ -383,31 +381,22 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
     function borrowRebalance() external whenNotEmergency nonReentrant override isKeeper {
         (uint256 _totalCollateral, uint256 _totalDebt, , , ,) = uniswapV3RiskOnHelper.borrowInfo(address(this));
         require(_totalCollateral > 0 || _totalDebt > 0, "CNBR");
-        console.log('borrowRebalance _totalCollateral: %d, _totalDebt: %d', _totalCollateral, _totalDebt);
-
         if (_totalDebt.mul(10000).div(_totalCollateral) >= 7500) {
             uint256 repayAmount = uniswapV3RiskOnHelper.calcAaveBaseCurrencyValueInAsset((_totalDebt - _totalCollateral.mul(5000).div(10000)), borrowToken);
             burnAll();
-            console.log('borrowRebalance before balanceOfToken(token0):%d, balanceOfToken(token1):%d, repayAmount:%d', balanceOfToken(token0()), balanceOfToken(token1()), repayAmount);
             if (balanceOfToken(borrowToken) < repayAmount) {
                 IUniswapV3(RiskOnConstant.UNISWAP_V3_ROUTER).exactOutputSingle(IUniswapV3.ExactOutputSingleParams(wantToken, borrowToken, 500, address(this), block.timestamp, repayAmount - balanceOfToken(borrowToken), type(uint256).max, 0));
-                console.log('borrowRebalance after balanceOfToken(token0):%d, balanceOfToken(token1):%d, else', balanceOfToken(token0()), balanceOfToken(token1()));
             }
             __repay(repayAmount);
             (, int24 _tick,,,,,) = pool.slot0();
             depositTo3rdPool(_tick);
         }
         if (_totalDebt.mul(10000).div(_totalCollateral) <= 4000) {
-            console.log('borrowRebalance priceOracleGetter.getAssetPrice:%d', uniswapV3RiskOnHelper.calcAaveBaseCurrencyValueInAsset((_totalCollateral.mul(5000).div(10000) - _totalDebt), borrowToken));
             __borrow(uniswapV3RiskOnHelper.calcAaveBaseCurrencyValueInAsset((_totalCollateral.mul(5000).div(10000) - _totalDebt), borrowToken));
             (, int24 _tick,,,,,) = pool.slot0();
             rebalance(_tick);
         }
-        //        (_totalCollateral, _totalDebt, _availableBorrowsETH, _currentLiquidationThreshold, _ltv, _healthFactor) = borrowInfo();
-        //        console.log('----------------%d,%d', _totalCollateral, _totalDebt);
-        //        console.log('----------------%d,%d', _availableBorrowsETH, _currentLiquidationThreshold);
-        //        console.log('----------------%d,%d', _ltv, _healthFactor);
-        //        console.log('----------------%d', getCurrentBorrow());
+        emit BorrowRebalance();
     }
 
     /// @notice Burn all liquidity
@@ -456,6 +445,7 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
         if (_baseLiquidity <= 0 && _limitLiquidity <= 0) return;
 
         depositTo3rdPool(_tick);
+        emit Rebalance();
     }
 
     /// @notice Gets the total liquidity of `_tokenId` NFT position.
@@ -595,7 +585,6 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
     /// Requirements: only vault manager can call
     function setEmergencyShutdown(bool _active) external isVaultManager override {
         emergencyShutdown = _active;
-        emit SetEmergencyShutdown(_active);
     }
 
     /// @dev Sets the manageFeeBps to the percentage of deposit that should be received in basis points.
@@ -603,28 +592,24 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
     function setManageFeeBps(uint256 _basis) external isVaultManager override {
         require(_basis <= 1000, "MFBCE");
         manageFeeBps = _basis;
-        emit ManageFeeBpsChanged(_basis);
     }
 
     /// @dev Sets the profitFeeBps to the percentage of yield that should be received in basis points.
     function setProfitFeeBps(uint256 _basis) external isVaultManager override {
         require(_basis <= 5000, "PFBCE");
         profitFeeBps = _basis;
-        emit ProfitFeeBpsChanged(_basis);
     }
 
     /// @dev Sets the token0MinLendAmount to lend.
     /// Requirements: only vault manager can call
     function setToken0MinLendAmount(uint256 _minLendAmount) external isVaultManager override {
         token0MinLendAmount = _minLendAmount;
-        emit SetToken0MinLendAmount(_minLendAmount);
     }
 
     /// @dev Sets the token1MinLendAmount to lend.
     /// Requirements: only vault manager can call
     function setToken1MinLendAmount(uint256 _minLendAmount) external isVaultManager override {
         token1MinLendAmount = _minLendAmount;
-        emit SetToken1MinLendAmount(_minLendAmount);
     }
 
     modifier isOwner() {
@@ -642,7 +627,6 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
     function setBaseThreshold(int24 _baseThreshold) external isVaultManager override {
         _checkThreshold(_baseThreshold);
         baseThreshold = _baseThreshold;
-        emit UniV3UpdateConfig();
     }
 
     /// @notice Sets `limitThreshold` state variable
@@ -650,7 +634,6 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
     function setLimitThreshold(int24 _limitThreshold) external isVaultManager override {
         _checkThreshold(_limitThreshold);
         limitThreshold = _limitThreshold;
-        emit UniV3UpdateConfig();
     }
 
     /// @notice Check the Validity of `_threshold`
@@ -662,7 +645,6 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
     /// Requirements: only vault manager  can call
     function setPeriod(uint256 _period) external isVaultManager override {
         period = _period;
-        emit UniV3UpdateConfig();
     }
 
     /// @notice Sets `minTickMove` state variable
@@ -670,7 +652,6 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
     function setMinTickMove(int24 _minTickMove) external isVaultManager override {
         require(_minTickMove >= 0, "MINE");
         minTickMove = _minTickMove;
-        emit UniV3UpdateConfig();
     }
 
     /// @notice Sets `maxTwapDeviation` state variable
@@ -678,7 +659,6 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
     function setMaxTwapDeviation(int24 _maxTwapDeviation) external isVaultManager override {
         require(_maxTwapDeviation >= 0, "MAXE");
         maxTwapDeviation = _maxTwapDeviation;
-        emit UniV3UpdateConfig();
     }
 
     /// @notice Sets `twapDuration` state variable
@@ -686,6 +666,5 @@ abstract contract UniswapV3RiskOnVault is IUniswapV3RiskOnVault, UniswapV3Liquid
     function setTwapDuration(uint32 _twapDuration) external isVaultManager override {
         require(_twapDuration > 0, "TWAPE");
         twapDuration = _twapDuration;
-        emit UniV3UpdateConfig();
     }
 }

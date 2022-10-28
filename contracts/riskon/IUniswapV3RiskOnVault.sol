@@ -12,22 +12,9 @@ interface IUniswapV3RiskOnVault {
         int24 tickUpper;
     }
 
-    event UniV3UpdateConfig();
+    event Rebalance();
 
-    /// @param _shutdown The new boolean value of the emergency shutdown switch
-    event SetEmergencyShutdown(bool _shutdown);
-
-    /// @param _basis The manage fee bps changed
-    event ManageFeeBpsChanged(uint256 _basis);
-
-    /// @param _basis The profit fee bps changed
-    event ProfitFeeBpsChanged(uint256 _basis);
-
-    /// @param _minLendAmount The token0MinLendAmount to lend
-    event SetToken0MinLendAmount(uint256 _minLendAmount);
-
-    /// @param _minLendAmount The token1MinLendAmount to lend
-    event SetToken1MinLendAmount(uint256 _minLendAmount);
+    event BorrowRebalance();
 
     /// @param _rewardTokens The reward tokens
     /// @param _claimAmounts The claim amounts
