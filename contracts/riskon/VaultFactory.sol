@@ -29,7 +29,7 @@ contract VaultFactory is Initializable, AccessControlMixin, ReentrancyGuardUpgra
     IUniswapV3RiskOnVaultInitialize[] public totalVaultAddrList;
 
     /// @notice key is user and vault impl address, and value is a vault address list
-    // user1 => UniswapV3UsdcWeth500RiskOnVault（基础合约地址） => VaultList[2] == [wethVault,usdcVault]
+    // user => vault implementation contract address => VaultList[2] == [wethVault,stablecoinVault]
     mapping(address => mapping(address => address[2])) public vaultAddressMap;
 
     EnumerableSetUpgradeable.AddressSet internal wethInvestorSet;
