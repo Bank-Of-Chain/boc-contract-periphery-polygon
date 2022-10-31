@@ -1,0 +1,11 @@
+┌────────────────────────────────────────┬──────────────────────────────────────────────┐
+│                (index)                 │                    Values                    │
+├────────────────────────────────────────┼──────────────────────────────────────────────┤
+│    UniswapV3UsdcWeth500RiskOnVault     │ '0x9a020e23814be9980D64357aE9aEa44Fc3f6A51f' │
+│           AccessControlProxy           │ '0xFa738A66B5531F20673eE2189CF4C0E5CB97Cd33' │
+│         UniswapV3RiskOnHelper          │ '0x95F5FF58aAb3C8a2Fc653546ec7C4F98A5235378' │
+│ contracts/riskon/Treasury.sol:Treasury │ '0xe3a66514B6e0aFa08aC98607D3d7eC6B8bACd6D5' │
+│              VaultFactory              │ '0xA92C91Fe965D7497A423d951fCDFA221fC354B5a' │
+│              WETH_ADDRESS              │ '0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619' │
+│              USDC_ADDRESS              │ '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174' │
+└────────────────────────────────────────┴──────────────────────────────────────────────┘
