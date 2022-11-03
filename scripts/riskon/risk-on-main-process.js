@@ -76,6 +76,14 @@ const main = async () => {
 
     console.log(`riskOnVault harvest after, estimatedTotalAssets: %d`, new BigNumber(await riskOnVault.estimatedTotalAssets()));
 
+    await riskOnVault.rebalanceByKeeper({from: keeper});
+
+    console.log(`riskOnVault rebalanceByKeeper after, estimatedTotalAssets: %d`, new BigNumber(await riskOnVault.estimatedTotalAssets()));
+
+    await riskOnVault.borrowRebalance({from: keeper});
+
+    console.log(`riskOnVault borrowRebalance after, estimatedTotalAssets: %d`, new BigNumber(await riskOnVault.estimatedTotalAssets()));
+
     async function swap(swapTokenAddress, swapTokenPosition, swapAmount, investor) {
         const mockUniswapV3Router = await MockUniswapV3Router.new();
 
