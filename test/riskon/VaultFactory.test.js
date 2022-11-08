@@ -6,8 +6,8 @@ const { assert, expect } = require('chai');
 const WETH_ADDRESS = '0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619';
 const USDC_ADDRESS = '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174';
 
-const wethVaultIndex = 0;
-const usdcVaultIndex = 1;
+const wethVaultIndex = 1;
+const usdcVaultIndex = 0;
 
 describe('VaultFactory', () => {
 
@@ -23,6 +23,8 @@ describe('VaultFactory', () => {
          this.gov = this.accounts[5];
          this.delegate = this.accounts[6];
          this.valueInterpreter = this.accounts[7];
+         
+         this.vaultManager = this.accounts[8];
 
      })
      
@@ -67,7 +69,8 @@ describe('VaultFactory', () => {
           this.vaultImpllist,
           this.accessControlProxy.address,
           this.uniswapV3RiskOnHelper.address,
-          this.valueInterpreter.address
+          this.valueInterpreter.address,
+          this.vaultManager.address
         );
         
         this.ERC20 = await ethers.getContractFactory("@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20");
@@ -86,17 +89,17 @@ describe('VaultFactory', () => {
        
      })
 
-     it('createNewVault should revert if the wantToken is not WETH or stablecoin', async () => {
+     it('createNewVault should revert if the wantToken is not token0 or token1', async () => {
       let vaultImpl = this.vaultImpllist[0];
-      await expect(this.vaultFactory.connect(this.firstUser)
+      await expect(this.vaultFactory.connect(this.vaultManager)
       .createNewVault(
          this.nonWethOrUsdcToken.address,
          vaultImpl
-         )).to.revertedWith('The wantToken is not WETH or stablecoin');
+         )).to.revertedWith('The wantToken is not token0 or token1');
      })
 
      it('createNewVault should revert if Vault Impl is invalid', async () => {
-      await expect(this.vaultFactory.connect(this.firstUser)
+      await expect(this.vaultFactory.connect(this.vaultManager)
       .createNewVault(WETH_ADDRESS, this.invalidVaultImpl.address))
       .to.revertedWith('Vault Impl is invalid');
      })
@@ -105,71 +108,46 @@ describe('VaultFactory', () => {
 
         //expect(await this.vaultFactory.vaultAddressMap(this.firstUser.address,this.nonWethOrUsdcToken.address)).to.be.equal(ethers.constants.AddressZero);
         let vaultImpl = this.vaultImpllist[0];
-        let getTwoInvestorlistLen = await this.vaultFactory.getTwoInvestorlistLen();
-        expect(getTwoInvestorlistLen._wethInvestorSetLen).to.be.equal(0);
-        expect(getTwoInvestorlistLen._stablecoinInvestorSetLen).to.be.equal(0);
         //create new weth-vault
-        await this.vaultFactory.connect(this.firstUser)
+        await this.vaultFactory.connect(this.vaultManager)
         .createNewVault(WETH_ADDRESS, vaultImpl);
 
         let vaultsLen = await this.vaultFactory.getVaultsLen()
         expect(vaultsLen).to.be.equal(1);
         let newVaultAddr = await await this.vaultFactory.totalVaultAddrList(vaultsLen - 1);
-        let userVaultAddr = await this.vaultFactory.vaultAddressMap(this.firstUser.address,vaultImpl,wethVaultIndex);
-        console.log("userVaultAddr is",userVaultAddr);
-        expect(await this.vaultFactory.vaultAddressMap(this.firstUser.address,vaultImpl,wethVaultIndex)).to.be.equal(newVaultAddr);
-        
-        //wethInvestorlist 
-        let wethInvestor = await this.vaultFactory.getWethInvestorByIndex(0);
-        expect(wethInvestor).to.be.equal(this.firstUser.address);
-
+        let vaultAddr = await this.vaultFactory.vaultAddressMap(vaultImpl,wethVaultIndex);
+        console.log("vaultAddr is",vaultAddr);
+        expect(vaultAddr).to.be.equal(newVaultAddr);
 
          //revert if weth-vault already created
-        await expect(this.vaultFactory.connect(this.firstUser)
+        await expect(this.vaultFactory.connect(this.vaultManager)
         .createNewVault(WETH_ADDRESS, vaultImpl))
         .to.revertedWith('Already created');
 
        //create new usdc-vault
         vaultImpl = this.vaultImpllist[0];
-        await this.vaultFactory.connect(this.firstUser)
+        await this.vaultFactory.connect(this.vaultManager)
         .createNewVault(USDC_ADDRESS, vaultImpl);
 
         vaultsLen = await this.vaultFactory.getVaultsLen()
         expect(vaultsLen).to.be.equal(2);
         newVaultAddr = await await this.vaultFactory.totalVaultAddrList(vaultsLen - 1);
         
-        userVaultAddr = await this.vaultFactory.vaultAddressMap(this.firstUser.address,vaultImpl,usdcVaultIndex);
-        console.log("userVaultAddr is",userVaultAddr);
-        expect(await this.vaultFactory.vaultAddressMap(this.firstUser.address,vaultImpl,usdcVaultIndex)).to.be.equal(newVaultAddr);
-
-        //wethInvestorlist
-        let usdInvestor = await this.vaultFactory.getStablecoinInvestorByIndex(0);
-        expect(usdInvestor).to.be.equal(this.firstUser.address);
-
-        //getTwoInvestorlist
-        let getTwoInvestorlist = await this.vaultFactory.getTwoInvestorlist();
-        console.log("getTwoInvestorlist is \n",getTwoInvestorlist);
-
-        getTwoInvestorlistLen = await this.vaultFactory.getTwoInvestorlistLen();
-        expect(getTwoInvestorlistLen._wethInvestorSetLen).to.be.equal(1);
-        expect(getTwoInvestorlistLen._stablecoinInvestorSetLen).to.be.equal(1);
+        vaultAddr = await this.vaultFactory.vaultAddressMap(vaultImpl,usdcVaultIndex);
+        console.log("vaultAddr is",vaultAddr);
+        expect(vaultAddr).to.be.equal(newVaultAddr);
 
         //revert if weth-vault already created
-        await expect(this.vaultFactory.connect(this.firstUser)
+        await expect(this.vaultFactory.connect(this.vaultManager)
         .createNewVault(USDC_ADDRESS, vaultImpl))
         .to.revertedWith('Already created');
 
         let vaultImpl01 = this.vaultImpllist[1];
-        await this.vaultFactory.connect(this.firstUser)
+        await this.vaultFactory.connect(this.vaultManager)
         .createNewVault(USDC_ADDRESS, vaultImpl01);
 
-        await this.vaultFactory.connect(this.firstUser)
+        await this.vaultFactory.connect(this.vaultManager)
         .createNewVault(WETH_ADDRESS, vaultImpl01);
-
-        getTwoInvestorlistLen = await this.vaultFactory.getTwoInvestorlistLen();
-        expect(getTwoInvestorlistLen._wethInvestorSetLen).to.be.equal(1);
-        expect(getTwoInvestorlistLen._stablecoinInvestorSetLen).to.be.equal(1);
-
 
      });
 

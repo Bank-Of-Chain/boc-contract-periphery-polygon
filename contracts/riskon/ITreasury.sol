@@ -37,11 +37,11 @@ interface ITreasury {
     ///         and the recipient of this swap is keeper
     /// @param _token The fee token
     /// @param _feeAmount The fee amount
-    function receiveManageFeeFromVault(address _token, uint256 _feeAmount) external;
+    function receiveManageFeeFromVault(address _token, uint256 _feeAmount) external payable;
 
     /// @notice Receive profits from a vault
     /// @param _token The profit token
     /// @param _profitAmount The profit amount
-    function receiveProfitFromVault(address _token, uint256 _profitAmount) external;
+    function receiveProfitFromVault(address _token, uint256 _profitAmount) external payable;
 
 }

@@ -4,6 +4,7 @@ const { send, balance} = require("@openzeppelin/test-helpers");
 
 const WETH_ADDRESS = '0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619';
 const USDC_ADDRESS = '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174';
+const NATIVE_TOKEN = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
 
 const usdcWhale = "0xe7804c37c13166fF0b37F5aE0BB07A3aEbb6e245"//Binance: Hot Wallet 2
 const wethWhale = "0x064917552b3121ed11321ecd8908fc79d00bcbb7";
@@ -53,8 +54,7 @@ describe('Treasury', () => {
         await this.treasury.deployed();
         await this.treasury.initialize(
             this.accessControlProxy.address, 
-            this.wethMock.address, 
-            this.usdcMock.address,
+            [this.wethMock.address, this.usdcMock.address, NATIVE_TOKEN],
             this.keeper.address
         );
 
@@ -63,6 +63,7 @@ describe('Treasury', () => {
      it("check initialize", async () =>{
          expect(await this.treasury.isReceivableToken(this.wethMock.address)).to.be.equal(true);
          expect(await this.treasury.isReceivableToken(this.usdcMock.address)).to.be.equal(true);
+         expect(await this.treasury.isReceivableToken(NATIVE_TOKEN)).to.be.equal(true);
        
      })
 
@@ -79,7 +80,12 @@ describe('Treasury', () => {
       await this.treasury.receiveProfitFromVault(this.wethMock.address,transferAmount);
       expect(await this.treasury.accVaultProfit(this.deployer.address,this.wethMock.address)).to.be.equal(transferAmount);
 
-      expect(await this.treasury.balance(this.wethMock.address)).to.be.equal(transferAmount);
+      await this.treasury.receiveProfitFromVault(NATIVE_TOKEN,transferAmount,{value:transferAmount});
+      expect(await this.treasury.accVaultProfit(this.deployer.address,NATIVE_TOKEN)).to.be.equal(transferAmount);
+
+      let treasuryBal = await balance.current(this.treasury.address);
+      console.log("treasuryBal-bal is ", treasuryBal.toString());
+      expect(ethers.BigNumber.from(treasuryBal.toString())).to.be.equal(ethers.BigNumber.from(transferAmount));
      })
 
      it('receiveManageFeeFromVault', async () => {
@@ -94,6 +100,7 @@ describe('Treasury', () => {
          
          const wethUser = await ethers.getImpersonatedSigner(wethWhale);
          const usdcUser = await ethers.getImpersonatedSigner(usdcWhale);
+         const mainCoinUser = this.externalUser;
 
          let keeperBal = await balance.current(this.keeper.address);
          console.log("keeper-bal is ", keeperBal.toString());
@@ -104,7 +111,7 @@ describe('Treasury', () => {
          await this.treasury.connect(usdcUser).receiveManageFeeFromVault(this.usdcMock.address,transferAmount);
          let accManageFee = await this.treasury.accManageFee(usdcUser.address,this.usdcMock.address)
          expect(accManageFee).to.be.equal(transferAmount);
-         let totalManageFeeInMatic2Keeper = await this.treasury.totalManageFeeInMatic2Keeper();
+         let totalManageFeeInMainCoin2Keeper = await this.treasury.totalManageFeeInMainCoin2Keeper();
          
          keeperBal = await balance.current(this.keeper.address);
          console.log("keeper-bal is ", keeperBal.toString());
@@ -118,7 +125,28 @@ describe('Treasury', () => {
          await this.treasury.connect(wethUser).receiveManageFeeFromVault(this.wethMock.address,transferAmountWeth);
          let accManageFeeWeth = await this.treasury.accManageFee(wethUser.address,this.wethMock.address)
          expect(accManageFeeWeth).to.be.equal(transferAmountWeth);
-         totalManageFeeInMatic2Keeper = await this.treasury.totalManageFeeInMatic2Keeper();
+
+         keeperBal = await balance.current(this.keeper.address);
+         console.log("keeper-bal is ", keeperBal.toString());
+
+         totalManageFeeInMainCoin2Keeper = await this.treasury.totalManageFeeInMainCoin2Keeper();
+         console.log("totalManageFeeInMainCoin2Keeper is ", totalManageFeeInMainCoin2Keeper.toString());
+
+         let mainCoinUserBal = await balance.current(mainCoinUser.address);
+         console.log("mainCoinUserBal is ", mainCoinUserBal.toString());
+
+         await this.treasury.connect(mainCoinUser).receiveManageFeeFromVault(
+          NATIVE_TOKEN,transferAmountWeth,
+          {value: transferAmountWeth}
+          );
+        mainCoinUserBal = await balance.current(mainCoinUser.address);
+        console.log("mainCoinUserBal is ", mainCoinUserBal.toString());
+
+         let accManageFeeMainCoin = await this.treasury.accManageFee(mainCoinUser.address,NATIVE_TOKEN)
+         expect(accManageFeeMainCoin).to.be.equal(transferAmountWeth);
+        
+         totalManageFeeInMainCoin2Keeper = await this.treasury.totalManageFeeInMainCoin2Keeper();
+         console.log("totalManageFeeInMainCoin2Keeper is ", totalManageFeeInMainCoin2Keeper.toString());
 
          keeperBal = await balance.current(this.keeper.address);
          console.log("keeper-bal is ", keeperBal.toString());
@@ -137,7 +165,7 @@ describe('Treasury', () => {
           await this.wethMock.approve(this.treasury.address,transferAmount);
           await this.treasury.receiveProfitFromVault(this.wethMock.address,transferAmount);
           
-          await this.treasury.connect(this.keeper).withdrawToken(
+          await this.treasury.connect(this.deployer).withdrawToken(
             this.wethMock.address,
             this.keeper.address,
             ethers.BigNumber.from(transferAmount).div(2)
@@ -146,7 +174,7 @@ describe('Treasury', () => {
 
           await this.wethMock.transfer(this.treasury.address,transferAmount);
 
-          await this.treasury.connect(this.keeper).withdrawToken(
+          await this.treasury.connect(this.deployer).withdrawToken(
             this.wethMock.address,
             this.keeper.address,
             ethers.BigNumber.from(transferAmount).mul(3).div(2)
@@ -160,7 +188,7 @@ describe('Treasury', () => {
 
           await send.ether(this.deployer.address, this.treasury.address, transferAmount)
 
-          await this.treasury.connect(this.keeper).withdrawETH(
+          await this.treasury.connect(this.deployer).withdrawETH(
             this.keeper.address,
             ethers.BigNumber.from(transferAmount).div(2)
           );
