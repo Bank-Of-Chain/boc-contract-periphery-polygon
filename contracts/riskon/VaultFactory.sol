@@ -74,7 +74,7 @@ contract VaultFactory is Initializable, AccessControlMixin, ReentrancyGuardUpgra
         require(
             _wantToken == IUniswapV3RiskOnVault(_vaultImpl).token0() || 
             _wantToken == IUniswapV3RiskOnVault(_vaultImpl).token1(),
-            'The wantToken is not WETH or stablecoin'
+            'The wantToken is not token0 or token1'
         );
         require(vaultImpl2Index[_vaultImpl] > 0,'Vault Impl is invalid');
         uint256 _index = 0;
